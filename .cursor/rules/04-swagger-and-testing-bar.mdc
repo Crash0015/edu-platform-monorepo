@@ -1,0 +1,29 @@
+---
+description: Swagger and testing minimum bar per service.
+globs:
+  - "apps/backend/**/src/**/*"
+  - "apps/backend/**/test/**/*"
+---
+
+# Swagger + Testing Minimum Bar
+
+## Swagger/OpenAPI
+
+- Every service must expose Swagger.
+- Controllers must include:
+  - tags
+  - request/response DTOs
+  - examples
+  - error responses (400/401/403/429/500)
+  - BearerAuth where required
+- Swagger must be accessible in QA (and optionally disabled in PROD).
+
+## Testing
+
+- Unit tests for core application services/use-cases.
+- Integration or e2e tests for at least:
+  - auth login
+  - refresh rotation
+  - forgot/reset password flow
+- Tests must use real Postgres in CI via docker (or Testcontainers if configured).
+- No mocking the whole world: keep one real DB integration test.

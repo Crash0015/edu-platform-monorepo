@@ -1,0 +1,29 @@
+---
+description: Dockerfile per service, CI builds/tests and pushes images to DockerHub.
+globs:
+  - ".github/workflows/**"
+  - "apps/backend/**/Dockerfile"
+  - "apps/backend/**/.dockerignore"
+---
+
+# Docker + CI/CD Rules
+
+- Each backend service MUST have its own Dockerfile and .dockerignore.
+- Docker images should be buildable from repo root with correct context.
+- CI must:
+
+  1. install deps
+  2. lint
+  3. test (unit + at least one integration)
+  4. build
+  5. docker build
+  6. docker push to DockerHub (main branch)
+
+- Use conventional tags:
+  - :latest (main)
+  - :sha-<GITHUB_SHA>
+  - :vX.Y.Z (if you add releases)
+
+If pipeline is simplified for time:
+
+- It must still run tests and build images for the auth-service at minimum.

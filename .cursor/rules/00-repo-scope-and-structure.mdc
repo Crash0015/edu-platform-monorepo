@@ -1,0 +1,23 @@
+---
+description: Repo structure, NX boundaries, and where to create new files/services.
+globs:
+  - "**/*"
+---
+
+# Repo Scope & Structure (NX monorepo)
+
+- This is an NX monorepo with deployables under `apps/` and shared libraries under `libs/`.
+- Backend services live under: `apps/backend/<domain>/<service-name>/`
+  Example (Identity): `apps/backend/identity/auth-service/` (preferred)
+- Do NOT place new backend services directly under `apps/` root unless the repo already does so.
+- Shared cross-service contracts live under `libs/contracts/*`.
+- Shared utilities (auth guard, logging, validation) live under `libs/shared/*`.
+
+When creating a new service:
+
+1. Create folder in the correct domain path.
+2. Add service README and SERVICE_SPEC.md.
+3. Add Dockerfile + test setup + Swagger.
+4. Ensure it can run locally via docker compose.
+
+Never break the structure defined in docs/architecture/decisions.md and docs/architecture/domains.md.

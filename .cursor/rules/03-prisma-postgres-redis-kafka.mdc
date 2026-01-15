@@ -1,0 +1,32 @@
+---
+description: Enforce real DB usage with Prisma + Postgres and Redis + Kafka integration.
+globs:
+  - "apps/backend/**/prisma/**"
+  - "apps/backend/**/src/infrastructure/**"
+---
+
+# Persistence & Integration Rules
+
+## Postgres via Prisma (system of record)
+
+- Use Prisma schema for Postgres.
+- Migrations must be generated (do not rely on "push" only).
+- All primary keys UUID.
+- Normalize transactional tables to 3NF where applicable.
+
+## Redis (cache / locks / rate limits only)
+
+- Redis must NOT be used as system of record.
+- Allowed use: rate limiting, locks, cache.
+
+## Kafka (primary event bus)
+
+- Produce events using a dedicated adapter in infrastructure.
+- Use a consistent event envelope (per docs/architecture/event-catalog.md).
+- Consumers must be idempotent (at-least-once delivery).
+
+## Outbox Pattern Preference
+
+- Prefer implementing outbox table + background publisher.
+- If omitted in the first iteration:
+  - Document the trade-off in docs and service README.

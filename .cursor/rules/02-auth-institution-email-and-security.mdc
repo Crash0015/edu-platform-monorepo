@@ -1,0 +1,62 @@
+---
+description: Auth-service rules: institutional email only, security, tokens, rotation, no raw tokens.
+globs:
+  - "apps/backend/identity/auth-service/**"
+  - "apps/backend/identity/auth-service/src/**/*"
+---
+
+# Auth-Service Non-Negotiables
+
+## Institutional Email Only
+
+- Login and password reset flows must accept ONLY institutional emails:
+  - Domain must end with `@uce.edu.ec`
+- Reject other domains with 400 (validation error).
+- Never reveal whether a user exists in forgot-password:
+  - Always return 200 with a generic message.
+
+## JWT + Refresh Rotation
+
+- Access token short-lived.
+- Refresh token long-lived with rotation:
+  - On refresh: revoke old refresh, issue new refresh.
+  - Support "token family" / session chain to detect reuse.
+
+## Token Storage
+
+- NEVER store raw refresh tokens or raw password reset tokens.
+- Store only hashes (+ salt/pepper if configured).
+- Store expiry timestamps and revoked/used timestamps.
+
+## RBAC
+
+- Mandatory roles: TEACHER / STUDENT / ADMIN.
+- Implement RolesGuard + @Roles decorator.
+- /auth/me requires valid access token.
+
+## Rate Limiting
+
+- Enforce per-IP and per-route limits at least for:
+  - POST /auth/login
+  - POST /auth/refresh
+  - POST /auth/forgot-password
+- Use Redis for rate limiting counters.
+
+## CORS
+
+- Must be explicit and environment-based.
+
+## No Hardcoded Users
+
+- No hardcoded accounts.
+- Dev seed allowed only if gated by NODE_ENV=development and documented.
+
+## Events (Kafka)
+
+Auth-service must emit events (no sensitive data):
+
+- auth.user.logged_in
+- auth.user.login_failed (optional but useful)
+- auth.user.password_reset_requested
+- auth.user.password_reset_completed
+  Include correlation_id and actor_user_id when available.

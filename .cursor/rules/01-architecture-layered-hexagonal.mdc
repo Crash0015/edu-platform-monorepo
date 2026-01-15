@@ -1,0 +1,26 @@
+---
+description: Enforce layered/hexagonal architecture inside each backend service.
+globs:
+  - "apps/backend/**/src/**/*"
+---
+
+# Service Architecture (Layered / Hexagonal)
+
+Inside each backend service, enforce this structure:
+
+- presentation/: controllers, route DTOs, swagger decorators, guards wiring
+- application/: use-cases (commands/queries), services orchestration, ports/interfaces
+- domain/: entities, value objects, domain services, invariants, domain errors
+- infrastructure/: prisma repositories, kafka producer, redis client, config, adapters
+- shared/: common utilities (logger, correlation id, errors mapping)
+
+Rules:
+
+- Controllers MUST be thin: no direct Prisma access.
+- Infrastructure must implement interfaces defined in application/domain.
+- Domain must not import from NestJS, Prisma, or external frameworks.
+- CQRS separation:
+  - Commands mutate state (write model).
+  - Queries do not mutate state.
+
+If any shortcut is taken due to time, document it in the service README under "Trade-offs".
