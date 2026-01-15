@@ -44,6 +44,12 @@ describe('AuthService (e2e)', () => {
     process.env.RATE_LIMIT_FORGOT_MAX = '100';
     process.env.RATE_LIMIT_RESET_MAX = '100';
 
+    execSync('npx prisma generate', {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: 'inherit',
+    });
+
     execSync('npx prisma migrate deploy', {
       cwd: process.cwd(),
       env: process.env,
