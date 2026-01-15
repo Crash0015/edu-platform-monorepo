@@ -12,7 +12,7 @@
     "build": "nest build",
     "test": "jest --config ./test/jest-unit.json",
     "test:unit": "jest --config ./test/jest-unit.json",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "prisma generate && jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy"
   },
