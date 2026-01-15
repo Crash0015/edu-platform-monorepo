@@ -7,6 +7,15 @@ import { GenericContainer, StartedTestContainer } from 'testcontainers';
 import { PrismaClient } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 
+jest.mock('otplib', () => ({
+  authenticator: {
+    options: {},
+    generateSecret: jest.fn(),
+    keyuri: jest.fn(),
+    verify: jest.fn(),
+  },
+}));
+
 describe('AuthService (e2e)', () => {
   let app: INestApplication;
   let postgres: StartedTestContainer;
