@@ -1,0 +1,9 @@
+node_modules
+dist
+test
+coverage
+*.log
+.env
+.env.*
+Dockerfile
+README.md
