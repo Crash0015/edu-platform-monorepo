@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { EVENT_PRODUCER, EVENT_VERSION } from '../../shared/constants/events.constants';
 
 export type EventEnvelope = {
@@ -18,7 +18,7 @@ export const buildEventEnvelope = (input: {
   actorUserId: string | null;
   payload: Record<string, unknown>;
 }): EventEnvelope => ({
-  event_id: uuidv4(),
+  event_id: randomUUID(),
   event_type: input.eventType,
   event_version: EVENT_VERSION,
   occurred_at: new Date().toISOString(),

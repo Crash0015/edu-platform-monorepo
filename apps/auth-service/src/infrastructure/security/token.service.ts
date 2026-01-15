@@ -1,8 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { randomBytes, createHmac } from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
+import { randomBytes, createHmac, randomUUID } from 'crypto';
 import { parseDurationToSeconds } from '../../shared/utils/duration';
 import { TokenService } from '../../application/auth/ports/auth.security';
 
@@ -75,7 +74,7 @@ export class JwtTokenService implements TokenService {
 
   async signRefreshToken(input: { userId: string; familyId: string }) {
     const expiresIn = this.refreshSeconds;
-    const jti = uuidv4();
+    const jti = randomUUID();
     const token = await this.jwtService.signAsync(
       {
         sub: input.userId,

@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import {
   AUTH_UNIT_OF_WORK,
   MFA_SECRET_REPOSITORY,
@@ -365,7 +365,7 @@ export class AuthService {
       email: user.email,
       roles: user.roles,
     });
-    const familyId = uuidv4();
+    const familyId = randomUUID();
     const refreshToken = await this.tokenService.signRefreshToken({ userId: user.id, familyId });
     const refreshTokenHash = this.tokenService.hashToken(refreshToken.token);
     const now = new Date();
