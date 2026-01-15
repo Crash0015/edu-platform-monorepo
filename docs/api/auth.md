@@ -190,16 +190,12 @@ Throttle repeated failures via Redis.
 ## 7) Domain Events (Kafka)
 
 Event types:
-auth.user.logged_in  
-auth.user.login_failed  
-auth.user.password_reset_requested  
-auth.user.password_reset_completed  
-auth.user.mfa_enabled  
-auth.user.mfa_disabled  
-auth.session.compromised
+iam.user.logged_in  
+iam.user.password_reset_requested  
+iam.user.password_reset_completed
 
 Event envelope fields:
-eventId, eventType, occurredAt, correlationId, actorUserId, payload(userId, email, roles)
+event_id, event_type, event_version, occurred_at, producer, correlation_id, actor_user_id, payload
 
 Never publish passwords, refresh tokens, reset tokens, MFA secrets or emails for non-existing users.
 
@@ -209,7 +205,7 @@ Never publish passwords, refresh tokens, reset tokens, MFA secrets or emails for
 
 Other services verify JWT via shared key, enforce RBAC via roles claim, and do NOT call auth-service synchronously per request.
 
-Password reset emails are triggered by auth.user.password_reset_requested → notification-service.
+Password reset emails are triggered by iam.user.password_reset_requested → notification-service.
 
 ---
 
