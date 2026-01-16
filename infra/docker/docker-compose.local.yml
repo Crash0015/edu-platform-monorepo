@@ -139,6 +139,7 @@ services:
       - edu-net
 
   # =========================
+<<<<<<< HEAD
   # API Gateway
   # =========================
   api-gateway:
@@ -254,6 +255,8 @@ services:
       - edu-net
 
   # =========================
+=======
+>>>>>>> origin/main
   # RabbitMQ
   # =========================
   rabbitmq:
