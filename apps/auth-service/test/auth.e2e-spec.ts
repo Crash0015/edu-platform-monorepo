@@ -59,11 +59,16 @@ describe('AuthService (e2e)', () => {
       stdio: 'inherit',
     });
 
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is required for PrismaClient');
+    }
     prisma = new PrismaClient({ datasourceUrl: databaseUrl });
     await prisma.$connect();
 
-    const role = await prisma.role.create({
-      data: {
+    const role = await prisma.role.upsert({
+      where: { name: 'STUDENT' },
+      update: {},
+      create: {
         name: 'STUDENT',
         description: 'Student',
       },
