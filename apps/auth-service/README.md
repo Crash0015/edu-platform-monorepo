@@ -3,6 +3,10 @@
 ## Purpose
 IAM service responsible for authentication, token rotation, password recovery, MFA (TOTP), and auth-domain events.
 
+## Architecture
+- Layered/Hexagonal: `presentation/`, `application/`, `infrastructure/`, `shared/`.
+- CQRS (light): commands (login/refresh/forgot/reset/MFA) and queries (me) live in the application layer.
+
 ## Endpoints
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/login/mfa`

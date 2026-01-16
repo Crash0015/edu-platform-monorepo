@@ -3,6 +3,10 @@
 ## Scope
 Implements authentication, refresh token rotation, password reset flow, MFA (TOTP), and auth-domain events.
 
+## Architecture
+- Layered/Hexagonal with clear separation of presentation/application/infrastructure/shared.
+- CQRS light: commands and queries are kept in the application layer.
+
 ## API
 See `docs/api/auth.md` for the full REST contract, validation rules, and event catalog alignment.
 
