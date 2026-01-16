@@ -5,6 +5,8 @@ import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import { AppModule } from '../src/app.module';
 
 jest.mock('otplib', () => ({
@@ -21,6 +23,7 @@ describe('AuthService (e2e)', () => {
   let postgres: StartedTestContainer;
   let redis: StartedTestContainer;
   let prisma: PrismaClient;
+  let pool: Pool;
 
   beforeAll(async () => {
     postgres = await new GenericContainer('postgres:16')
@@ -62,11 +65,9 @@ describe('AuthService (e2e)', () => {
     if (!databaseUrl) {
       throw new Error('DATABASE_URL is required for PrismaClient');
     }
-    prisma = new PrismaClient({
-      datasources: {
-        db: { url: databaseUrl },
-      },
-    });
+    pool = new Pool({ connectionString: databaseUrl });
+    const adapter = new PrismaPg(pool);
+    prisma = new PrismaClient({ adapter });
     await prisma.$connect();
 
     const role = await prisma.role.upsert({
@@ -101,6 +102,7 @@ describe('AuthService (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('api/v1');
     await app.init();
   });
 
@@ -110,6 +112,9 @@ describe('AuthService (e2e)', () => {
     }
     if (prisma) {
       await prisma.$disconnect();
+    }
+    if (pool) {
+      await pool.end();
     }
     if (postgres) {
       await postgres.stop();
