@@ -139,6 +139,27 @@ services:
       - edu-net
 
   # =========================
+  # API Gateway
+  # =========================
+  api-gateway:
+    build:
+      context: ../../apps/api-gateway
+      dockerfile: Dockerfile
+    container_name: edu-api-gateway
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      AUTH_SERVICE_URL: http://auth-service:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+    networks:
+      - edu-net
+
+  # =========================
   # Enrollment Service
   # =========================
   enrollment-service:

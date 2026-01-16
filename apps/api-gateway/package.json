@@ -1,0 +1,35 @@
+{
+  "name": "api-gateway",
+  "version": "1.0.0",
+  "description": "API Gateway",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "build": "nest build",
+    "test": "jest --config ./test/jest-unit.json",
+    "test:unit": "jest --config ./test/jest-unit.json"
+  },
+  "dependencies": {
+    "@nestjs/axios": "^4.0.1",
+    "@nestjs/common": "^11.1.11",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.11",
+    "@nestjs/platform-express": "^11.1.11",
+    "@nestjs/swagger": "^11.2.4",
+    "axios": "^1.12.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.14",
+    "@nestjs/testing": "^11.1.12",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.6",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
