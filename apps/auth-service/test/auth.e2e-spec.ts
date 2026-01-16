@@ -62,7 +62,11 @@ describe('AuthService (e2e)', () => {
     if (!databaseUrl) {
       throw new Error('DATABASE_URL is required for PrismaClient');
     }
-    prisma = new PrismaClient({ datasourceUrl: databaseUrl });
+    prisma = new PrismaClient({
+      datasources: {
+        db: { url: databaseUrl },
+      },
+    });
     await prisma.$connect();
 
     const role = await prisma.role.upsert({
