@@ -122,6 +122,50 @@ services:
       - edu-net
 
   # =========================
+  # Notification Service
+  # =========================
+  notification-service:
+    build:
+      context: ../../apps/notification-service
+      dockerfile: Dockerfile
+    container_name: edu-notification-service
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3005:3005"
+    depends_on:
+      - rabbitmq
+    networks:
+      - edu-net
+
+  # =========================
+  # Automation Service
+  # =========================
+  automation-service:
+    build:
+      context: ../../apps/automation-service
+      dockerfile: Dockerfile
+    container_name: edu-automation-service
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MQTT_URL: mqtt://mqtt:1883
+    ports:
+      - "3006:3006"
+    depends_on:
+      - rabbitmq
+      - mqtt
+    networks:
+      - edu-net
+
+  # =========================
   # RabbitMQ
   # =========================
   rabbitmq:
