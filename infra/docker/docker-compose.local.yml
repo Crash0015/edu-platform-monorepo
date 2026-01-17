@@ -19,6 +19,23 @@ services:
       - edu-net
 
   # =========================
+  # PostgreSQL (Enrollment)
+  # =========================
+  postgres-enrollment:
+    image: postgres:16
+    container_name: edu-postgres-enrollment
+    environment:
+      POSTGRES_USER: edu
+      POSTGRES_PASSWORD: edu
+      POSTGRES_DB: enrollmentdb
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_enrollment_data:/var/lib/postgresql/data
+    networks:
+      - edu-net
+
+  # =========================
   # MongoDB (Audit / Events)
   # =========================
   mongo:
@@ -122,6 +139,121 @@ services:
       - edu-net
 
   # =========================
+  # API Gateway
+  # =========================
+  api-gateway:
+    build:
+      context: ../../apps/api-gateway
+      dockerfile: Dockerfile
+    container_name: edu-api-gateway
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      AUTH_SERVICE_URL: http://auth-service:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+    networks:
+      - edu-net
+
+  # =========================
+  # Enrollment Service
+  # =========================
+  enrollment-service:
+    build:
+      context: ../../apps/enrollment-service
+      dockerfile: Dockerfile
+    container_name: edu-enrollment-service
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      DATABASE_URL: postgresql://edu:edu@postgres-enrollment:5432/enrollmentdb
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: enrollment-service
+      KAFKA_ENABLED: "true"
+    ports:
+      - "3007:3007"
+    depends_on:
+      - postgres-enrollment
+      - kafka
+    networks:
+      - edu-net
+
+  # =========================
+  # Search Service
+  # =========================
+  search-service:
+    build:
+      context: ../../apps/search-service
+      dockerfile: Dockerfile
+    container_name: edu-search-service
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      MONGO_URL: mongodb://mongo:27017/search
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: search-service
+      KAFKA_ENABLED: "true"
+    ports:
+      - "3008:3008"
+    depends_on:
+      - mongo
+      - kafka
+    networks:
+      - edu-net
+
+  # =========================
+  # Notification Service
+  # =========================
+  notification-service:
+    build:
+      context: ../../apps/notification-service
+      dockerfile: Dockerfile
+    container_name: edu-notification-service
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3005:3005"
+    depends_on:
+      - rabbitmq
+    networks:
+      - edu-net
+
+  # =========================
+  # Automation Service
+  # =========================
+  automation-service:
+    build:
+      context: ../../apps/automation-service
+      dockerfile: Dockerfile
+    container_name: edu-automation-service
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MQTT_URL: mqtt://mqtt:1883
+    ports:
+      - "3006:3006"
+    depends_on:
+      - rabbitmq
+      - mqtt
+    networks:
+      - edu-net
+
+  # =========================
   # RabbitMQ
   # =========================
   rabbitmq:
@@ -151,3 +283,4 @@ networks:
 volumes:
   pg_data:
   mongo_data:
+  pg_enrollment_data:

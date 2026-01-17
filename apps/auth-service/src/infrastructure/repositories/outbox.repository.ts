@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { OutboxRepository, OutboxEventInput } from '../../application/auth/ports/auth.repositories';
 import { PrismaClientLike } from './prisma.types';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class PrismaOutboxRepository implements OutboxRepository {
-  constructor(private readonly prisma: PrismaClientLike) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaClientLike) {}
 
   async enqueue(event: OutboxEventInput): Promise<void> {
     await this.prisma.outboxEvent.create({
