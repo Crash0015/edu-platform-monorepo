@@ -21,7 +21,9 @@ const defaultHeaders = {
   'X-Correlation-Id': 'k6-load-test',
 };
 
-export function setup() {
+let refreshToken = '';
+
+function login() {
   const loginRes = http.post(`${baseUrl}/api/v1/auth/login`, loginPayload, {
     headers: defaultHeaders,
   });
@@ -31,27 +33,39 @@ export function setup() {
   });
 
   if (!loginOk) {
-    throw new Error(`Login failed with status ${loginRes.status}`);
+    return '';
   }
 
   const body = loginRes.json();
-  if (!body || !body.refreshToken) {
-    throw new Error('Refresh token missing from login response');
-  }
-
-  return { refreshToken: body.refreshToken };
+  return body?.refreshToken ?? '';
 }
 
-export default function (data) {
+export default function () {
+  if (!refreshToken) {
+    refreshToken = login();
+  }
+
+  if (!refreshToken) {
+    sleep(1);
+    return;
+  }
+
   const refreshRes = http.post(
     `${baseUrl}/api/v1/auth/refresh`,
-    JSON.stringify({ refreshToken: data.refreshToken }),
+    JSON.stringify({ refreshToken }),
     { headers: defaultHeaders },
   );
 
-  check(refreshRes, {
+  const refreshOk = check(refreshRes, {
     'refresh status 200': (res) => res.status === 200,
   });
+
+  if (refreshOk) {
+    const body = refreshRes.json();
+    refreshToken = body?.refreshToken ?? refreshToken;
+  } else {
+    refreshToken = '';
+  }
 
   sleep(1);
 }
