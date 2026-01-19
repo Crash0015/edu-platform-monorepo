@@ -151,6 +151,24 @@ export class JwtTokenService implements TokenService {
     }
   }
 
+  async verifyAccessToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.accessSecret,
+      });
+      if (payload?.type !== 'access') {
+        throw new UnauthorizedException('Invalid access token');
+      }
+      return {
+        userId: payload.sub as string,
+        email: payload.email as string,
+        roles: (payload.roles as string[]) ?? [],
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid access token');
+    }
+  }
+
   hashToken(token: string): string {
     return createHmac('sha256', this.hashSecret).update(token).digest('hex');
   }
@@ -158,4 +176,5 @@ export class JwtTokenService implements TokenService {
   generateRandomToken(): string {
     return randomBytes(32).toString('base64url');
   }
+
 }

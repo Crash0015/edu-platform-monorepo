@@ -4,7 +4,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { AuthModule } from './presentation/auth/auth.module';
 import { HealthModule } from './presentation/health/health.module';
+import { GrpcModule } from './presentation/grpc/grpc.module';
 import { CorrelationIdMiddleware } from './shared/middleware/correlation-id.middleware';
+
 
 @Module({
   imports: [
@@ -15,6 +17,7 @@ import { CorrelationIdMiddleware } from './shared/middleware/correlation-id.midd
     PrismaModule,
     AuthModule,
     HealthModule,
+    GrpcModule,
   ],
 })
 export class AppModule implements NestModule {

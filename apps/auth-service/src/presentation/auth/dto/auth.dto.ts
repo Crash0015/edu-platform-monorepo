@@ -1,8 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 const INSTITUTIONAL_EMAIL_REGEX = /^[^@]+@uce\.edu\.ec$/i;
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,}$/;
+const USER_TYPES = ['TEACHER', 'STUDENT', 'ADMIN'] as const;
+type RegisterUserType = (typeof USER_TYPES)[number];
+
 
 export class LoginRequestDto {
   @ApiProperty({ example: 'student@uce.edu.ec' })
@@ -16,7 +29,47 @@ export class LoginRequestDto {
   password!: string;
 }
 
+export class RegisterRequestDto {
+  @ApiProperty({ example: 'student@uce.edu.ec' })
+  @IsEmail()
+  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email must end with @uce.edu.ec' })
+  email!: string;
+
+  @ApiProperty({ example: 'StrongPassword123!' })
+  @IsString()
+  @Matches(STRONG_PASSWORD_REGEX, {
+    message: 'password must be at least 10 chars, include uppercase, lowercase, and number',
+  })
+  password!: string;
+
+  @ApiProperty({ example: 'Jane Doe' })
+  @IsString()
+  @Length(2, 150)
+  fullName!: string;
+
+  @ApiProperty({ example: 'STUDENT' })
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(USER_TYPES)
+  userType!: RegisterUserType;
+}
+
+export class RegisterResponseDto {
+  @ApiProperty({ example: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ example: 'student@uce.edu.ec' })
+  email!: string;
+
+  @ApiProperty({ example: 'ACTIVE' })
+  status!: string;
+
+  @ApiProperty({ example: 'STUDENT' })
+  userType!: string;
+}
+
 export class LoginResponseDto {
+
   @ApiProperty({ example: false })
   mfaRequired!: boolean;
 

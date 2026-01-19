@@ -11,9 +11,17 @@ export type OutboxEventInput = {
 export interface UserRepository {
   findByEmail(email: string): Promise<AuthUser | null>;
   findById(id: string): Promise<AuthUser | null>;
+  create(input: {
+    email: string;
+    passwordHash: string;
+    fullName: string;
+    userType: AuthUser['userType'];
+    status: AuthUser['status'];
+  }): Promise<AuthUser>;
   updateLastLogin(userId: string, at: Date): Promise<void>;
   updatePassword(userId: string, passwordHash: string): Promise<void>;
 }
+
 
 export interface RefreshTokenRepository {
   findByTokenHash(tokenHash: string): Promise<RefreshTokenRecord | null>;

@@ -14,6 +14,7 @@ import { NOTIFICATION_QUEUE } from '../../application/notifications/notification
       useClass: RabbitMqNotificationQueue,
     },
   ],
-  exports: [NOTIFICATION_QUEUE],
+  exports: [NOTIFICATION_QUEUE, RabbitMqService],
+
 })
 export class RabbitMqModule {}

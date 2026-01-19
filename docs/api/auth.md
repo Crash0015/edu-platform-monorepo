@@ -106,7 +106,14 @@ Status codes:
 
 ## 5) Endpoints
 
+### gRPC VerifyToken
+Service: `AuthService`  
+Method: `VerifyToken`  
+Request: `access_token`  
+Response: `valid`, `user_id`, `email`, `roles`, `error`
+
 ### POST /login
+
 
 Authenticate with institutional email and password. Rate limited.
 
@@ -203,9 +210,10 @@ Never publish passwords, refresh tokens, reset tokens, MFA secrets or emails for
 
 ## 8) Integration Contracts
 
-Other services verify JWT via shared key, enforce RBAC via roles claim, and do NOT call auth-service synchronously per request.
+Other services verify JWT via shared key or the gRPC `AuthService.VerifyToken` method, enforce RBAC via roles claim, and do NOT call auth-service synchronously per request.
 
 Password reset emails are triggered by iam.user.password_reset_requested → notification-service.
+
 
 ---
 

@@ -20,13 +20,15 @@ This rubric is evaluated at the **system level**, not per service. The communica
 | 5 | Security (JWT, CORS, rate limit, bastion, firewall) | auth-service + infra | JWT/CORS/rate limit in auth-service; infra items documented in ADR-013/ADR-014【F:apps/auth-service/src/infrastructure/security/token.service.ts†L12-L115】【F:apps/auth-service/src/main.ts†L14-L37】【F:docs/architecture/decisions.md†L251-L288】 | Partial |
 | 6 | AWS + PaaS | material-service + infra | ADR-008 (Strapi PaaS)【F:docs/architecture/decisions.md†L148-L162】 | Planned |
 | 7 | CI/CD (GitHub Actions) | System | `.github/workflows/ci.yml`, `.github/workflows/docker-publish.yml`【F:.github/workflows/ci.yml†L1-L45】【F:.github/workflows/docker-publish.yml†L1-L31】 | Implemented |
-| 8 | Testing (unit/functional/load) in CI/CD | All services | Unit tests + auth e2e wired in CI; load testing still pending【F:.github/workflows/ci.yml†L1-L45】【F:docs/architecture/decisions.md†L373-L381】 | Partial |
-| 9 | Docker registry (DockerHub/GHCR) | System | Docker push workflow in `docker-publish.yml`【F:.github/workflows/docker-publish.yml†L1-L31】 | Implemented |
+| 8 | Testing (unit/functional/load) in CI/CD | All services | Unit tests for auth/enrollment/course/user + auth e2e + load test in CI【F:.github/workflows/ci.yml†L1-L122】【F:apps/course-service/src/application/courses.service.spec.ts†L1-L26】【F:apps/user-service/src/application/users.service.spec.ts†L1-L28】 | Partial |
+| 9 | Docker registry (DockerHub/GHCR) | System | Docker push workflow includes auth/api-gateway/notification/automation/enrollment/search/course/user【F:.github/workflows/docker-publish.yml†L1-L42】 | Implemented |
+
 | 10 | Design principles (SOLID, DRY, KISS, Low Coupling/High Cohesion) | System | SRP/DIP via ports in auth-service; layering in auth-service【F:apps/auth-service/src/application/auth/ports/auth.repositories.ts†L1-L74】【F:apps/auth-service/src/presentation/auth/auth.module.ts†L1-L77】 | Partial |
 | 11 | 3+ DB types (one cache) | System | ADR-007 data store strategy【F:docs/architecture/decisions.md†L126-L145】 | Partial |
 | 12 | ELB + ASG | Infra | ADR-016 (HA strategy)【F:docs/architecture/decisions.md†L311-L327】 | Missing |
 | 13 | Terraform | Infra | ADR-017 (IaC decision)【F:docs/architecture/decisions.md†L331-L349】 | Missing |
-| 14 | API Gateway | api-gateway | Gateway proxy controller and service【F:apps/api-gateway/src/presentation/gateway/gateway.controller.ts†L1-L17】【F:apps/api-gateway/src/application/gateway/gateway.service.ts†L1-L20】 | Implemented |
+| 14 | API Gateway | api-gateway | Gateway proxy controller and service (auth + enrollment assign)【F:apps/api-gateway/src/presentation/gateway/gateway.controller.ts†L1-L36】【F:apps/api-gateway/src/application/gateway/gateway.service.ts†L1-L30】 | Implemented |
+
 | 15 | Comms (REST + Kafka/RabbitMQ/MQTT) | System | Kafka in auth/enrollment, RabbitMQ in notification/automation, MQTT in automation【F:apps/auth-service/src/infrastructure/kafka/kafka.service.ts†L1-L57】【F:apps/enrollment-service/src/infrastructure/kafka/kafka.service.ts†L1-L57】【F:apps/notification-service/src/infrastructure/rabbitmq/rabbitmq.service.ts†L1-L50】【F:apps/automation-service/src/infrastructure/mqtt/mqtt.service.ts†L1-L39】 | Implemented |
 | 16 | Architectures (≥2) + EDA + CQRS | System | Layered auth-service; MVC-style api-gateway; EDA via Kafka events【F:apps/auth-service/src/app.module.ts†L1-L20】【F:apps/api-gateway/src/app.module.ts†L1-L18】【F:docs/architecture/decisions.md†L211-L221】 | Implemented |
 | 17 | Monitoring & alerting (Prometheus/Grafana) | monitoring | ADR-017/ADR-018 references; monitoring implementation missing【F:docs/architecture/decisions.md†L331-L349】 | Missing |

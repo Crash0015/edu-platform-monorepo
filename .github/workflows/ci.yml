@@ -17,6 +17,9 @@ jobs:
           - automation-service
           - enrollment-service
           - search-service
+          - course-service
+          - user-service
+
     defaults:
       run:
         working-directory: apps/${{ matrix.service }}
@@ -62,3 +65,60 @@ jobs:
 
       - name: E2E tests (auth-service)
         run: npm run test:e2e
+
+  auth-load-test:
+    runs-on: ubuntu-latest
+    needs: auth-e2e
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/auth-service/package-lock.json
+
+      - name: Install auth-service dependencies
+        run: npm ci
+        working-directory: apps/auth-service
+
+      - name: Start auth dependencies
+        run: docker compose -f infra/docker/docker-compose.local.yml up -d postgres redis zookeeper kafka auth-service
+
+      - name: Wait for auth-service
+        run: |
+          for i in {1..30}; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health | grep -q "200"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "auth-service did not become healthy" && exit 1
+
+      - name: Run auth migrations
+        run: DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npx prisma migrate deploy --schema prisma/schema.prisma
+        working-directory: apps/auth-service
+
+      - name: Seed auth user
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3001/api/v1/auth/register \
+            -H "Content-Type: application/json" \
+            -d '{"email":"student@uce.edu.ec","password":"Password123!","fullName":"Load Test","userType":"STUDENT"}')
+          if [ "$STATUS" != "201" ] && [ "$STATUS" != "400" ]; then
+            echo "Unexpected register status: $STATUS" && exit 1
+          fi
+
+      - name: Run k6 load test
+        run: |
+          docker run --rm --network host \
+            -e AUTH_BASE_URL=http://localhost:3001 \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            grafana/k6 run tools/k6/auth-service.js
+
+      - name: Shutdown compose
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.local.yml down -v
+

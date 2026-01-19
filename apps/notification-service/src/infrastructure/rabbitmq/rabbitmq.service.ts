@@ -4,25 +4,28 @@ import * as amqp from 'amqplib';
 
 @Injectable()
 export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
-  private connection?: amqp.Connection;
+  private connection?: amqp.Connection | amqp.ChannelModel;
   private channel?: amqp.Channel;
 
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const url = this.configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672');
-    this.connection = await amqp.connect(url);
-    this.channel = await this.connection.createChannel();
+    const connection = await amqp.connect(url);
+    const channel = await connection.createChannel();
+    this.connection = connection;
+    this.channel = channel;
   }
 
   async onModuleDestroy() {
     if (this.channel) {
       await this.channel.close();
     }
-    if (this.connection) {
+    if (this.connection && 'close' in this.connection) {
       await this.connection.close();
     }
   }
+
 
   async publish(queue: string, payload: Record<string, unknown>) {
     if (!this.channel) {

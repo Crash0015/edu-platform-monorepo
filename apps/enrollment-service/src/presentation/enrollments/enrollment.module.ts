@@ -5,7 +5,6 @@ import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { KafkaModule } from '../../infrastructure/kafka/kafka.module';
 import { ENROLLMENT_REPOSITORY } from '../../application/enrollments/enrollment.service';
 import { PrismaEnrollmentRepository } from '../../infrastructure/prisma/enrollment.repository';
-
 @Module({
   imports: [PrismaModule, KafkaModule],
   controllers: [EnrollmentController],
@@ -18,3 +17,4 @@ import { PrismaEnrollmentRepository } from '../../infrastructure/prisma/enrollme
   ],
 })
 export class EnrollmentModule {}
+

@@ -11,6 +11,17 @@ export type AuthUser = {
   mfaEnabled: boolean;
 };
 
+export type LoginResult = {
+  mfaRequired: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  tokenType?: string;
+  mfaToken?: string;
+  challengeExpiresIn?: number;
+};
+
+
 export type RefreshTokenRecord = {
   id: string;
   userId: string;

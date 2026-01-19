@@ -83,12 +83,14 @@ services:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092" # Puerto extra para acceso externo (si usas tools UI)
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Definimos dos listeners: INTERNAL (Docker) y EXTERNAL (Host)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - edu-net
@@ -104,33 +106,12 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3001
+      GRPC_PORT: 50051
       CORS_ORIGINS: http://localhost:3000
       SWAGGER_ENABLED: "true"
-      DATABASE_URL: postgresql://edu:edu@postgres:5432/authdb
-      REDIS_URL: redis://redis:6379
-      JWT_ACCESS_SECRET: dev_access_secret
-      JWT_REFRESH_SECRET: dev_refresh_secret
-      JWT_ACCESS_EXPIRES_IN: 15m
-      JWT_REFRESH_EXPIRES_IN: 7d
-      TOKEN_HASH_SECRET: dev_token_hash_secret
-      MFA_CHALLENGE_SECRET: dev_mfa_secret
-      MFA_CHALLENGE_EXPIRES_IN: 5m
-      MFA_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-      MFA_ISSUER: UCE Auth
-      PASSWORD_RESET_EXPIRES_IN: 30m
-      KAFKA_BROKERS: kafka:9092
-      KAFKA_CLIENT_ID: auth-service
-      KAFKA_ENABLED: "true"
-      RATE_LIMIT_LOGIN_MAX: 5
-      RATE_LIMIT_LOGIN_WINDOW_SEC: 60
-      RATE_LIMIT_REFRESH_MAX: 10
-      RATE_LIMIT_REFRESH_WINDOW_SEC: 60
-      RATE_LIMIT_FORGOT_MAX: 5
-      RATE_LIMIT_FORGOT_WINDOW_SEC: 300
-      RATE_LIMIT_RESET_MAX: 5
-      RATE_LIMIT_RESET_WINDOW_SEC: 300
     ports:
       - "3001:3001"
+      - "50051:50051"
     depends_on:
       - postgres
       - redis
@@ -139,7 +120,42 @@ services:
       - edu-net
 
   # =========================
-<<<<<<< HEAD
+  # User Service
+  # =========================
+  user-service:
+    build:
+      context: ../../apps/user-service
+      dockerfile: Dockerfile
+    container_name: edu-user-service
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+    ports:
+      - "3008:3008"
+    networks:
+      - edu-net
+
+  # =========================
+  # Course Service
+  # =========================
+  course-service:
+    build:
+      context: ../../apps/course-service
+      dockerfile: Dockerfile
+    container_name: edu-course-service
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+    ports:
+      - "3004:3004"
+    networks:
+      - edu-net
+
+  # =========================
   # API Gateway
   # =========================
   api-gateway:
@@ -153,10 +169,11 @@ services:
       CORS_ORIGINS: http://localhost:3000
       SWAGGER_ENABLED: "true"
       AUTH_SERVICE_URL: http://auth-service:3001
+      ENROLLMENT_SERVICE_URL: http://enrollment-service:3007
     ports:
       - "3000:3000"
     depends_on:
-      - auth-service
+      - enrollment-service
     networks:
       - edu-net
 
@@ -177,35 +194,12 @@ services:
       KAFKA_BROKERS: kafka:9092
       KAFKA_CLIENT_ID: enrollment-service
       KAFKA_ENABLED: "true"
+      USER_SERVICE_URL: http://user-service:3008
+      COURSE_SERVICE_URL: http://course-service:3004
     ports:
       - "3007:3007"
     depends_on:
       - postgres-enrollment
-      - kafka
-    networks:
-      - edu-net
-
-  # =========================
-  # Search Service
-  # =========================
-  search-service:
-    build:
-      context: ../../apps/search-service
-      dockerfile: Dockerfile
-    container_name: edu-search-service
-    environment:
-      NODE_ENV: development
-      PORT: 3008
-      CORS_ORIGINS: http://localhost:3000
-      SWAGGER_ENABLED: "true"
-      MONGO_URL: mongodb://mongo:27017/search
-      KAFKA_BROKERS: kafka:9092
-      KAFKA_CLIENT_ID: search-service
-      KAFKA_ENABLED: "true"
-    ports:
-      - "3008:3008"
-    depends_on:
-      - mongo
       - kafka
     networks:
       - edu-net
@@ -218,12 +212,23 @@ services:
       context: ../../apps/notification-service
       dockerfile: Dockerfile
     container_name: edu-notification-service
+    env_file:
+      - ../../apps/notification-service/.env
     environment:
       NODE_ENV: development
       PORT: 3005
       CORS_ORIGINS: http://localhost:3000
       SWAGGER_ENABLED: "true"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-UCE Platform <no-reply@uce.local>}
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: notification-service
+      KAFKA_ENABLED: "true"
+      USER_SERVICE_URL: http://user-service:3008
     ports:
       - "3005:3005"
     depends_on:
@@ -254,9 +259,8 @@ services:
     networks:
       - edu-net
 
+
   # =========================
-=======
->>>>>>> origin/main
   # RabbitMQ
   # =========================
   rabbitmq:
@@ -269,8 +273,21 @@ services:
       - edu-net
 
   # =========================
+  # MailHog (SMTP for CI)
+  # =========================
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: edu-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - edu-net
+
+  # =========================
   # MQTT (Mosquitto)
   # =========================
+
   mqtt:
     image: eclipse-mosquitto:2
     container_name: edu-mqtt

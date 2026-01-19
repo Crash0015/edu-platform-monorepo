@@ -6,7 +6,10 @@ describe('NotificationService', () => {
     const queue: NotificationQueue = {
       enqueueEmail: jest.fn(),
     };
-    const service = new NotificationService(queue);
+    const configService = {
+      get: jest.fn(),
+    };
+    const service = new NotificationService(queue, configService as any);
 
     const payload = {
       to: 'student@uce.edu.ec',
@@ -19,4 +22,5 @@ describe('NotificationService', () => {
 
     expect(queue.enqueueEmail).toHaveBeenCalledWith(payload);
   });
+
 });

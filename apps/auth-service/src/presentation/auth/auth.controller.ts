@@ -27,8 +27,11 @@ import {
   MfaVerifyRequestDto,
   RefreshRequestDto,
   RefreshResponseDto,
+  RegisterRequestDto,
+  RegisterResponseDto,
   ResetPasswordRequestDto,
 } from './dto/auth.dto';
+
 
 @ApiTags('auth')
 @Controller('auth')
@@ -81,10 +84,24 @@ export class AuthController {
     return { ...result, mfaRequired: false };
   }
 
+  @Post('register')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOkResponse({ type: RegisterResponseDto })
+  @ApiBadRequestResponse({ description: 'Validation failed' })
+  async register(
+    @Body() body: RegisterRequestDto,
+    @Req() request: RequestWithCorrelation,
+  ): Promise<RegisterResponseDto> {
+    const context = this.createContext(request);
+    return this.authService.register(body, context);
+  }
+
   @Post('login/mfa')
   @HttpCode(200)
   @ApiOperation({ summary: 'Complete login with MFA code' })
   @ApiOkResponse({ type: RefreshResponseDto })
+
   @ApiUnauthorizedResponse({ description: 'Invalid MFA challenge' })
   async loginMfa(
     @Body() body: LoginMfaRequestDto,

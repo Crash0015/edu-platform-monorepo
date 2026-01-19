@@ -2,8 +2,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { OutboxRepository } from '../../application/auth/ports/auth.repositories';
-import { KafkaService } from '../kafka/kafka.service';
+import { KafkaProducer } from '../kafka/kafka-producer.service';
 import { OUTBOX_REPOSITORY } from '../../shared/constants/tokens.constants';
+
 
 @Injectable()
 export class OutboxPublisherService {
@@ -14,9 +15,10 @@ export class OutboxPublisherService {
   constructor(
     @Inject(OUTBOX_REPOSITORY)
     private readonly outboxRepository: OutboxRepository,
-    private readonly kafkaService: KafkaService,
+    private readonly kafkaProducer: KafkaProducer,
     private readonly configService: ConfigService,
   ) {
+
     this.batchSize = Number(this.configService.get<number>('OUTBOX_BATCH_SIZE', 20));
     this.maxAttempts = Number(this.configService.get<number>('OUTBOX_MAX_ATTEMPTS', 5));
   }
@@ -30,7 +32,8 @@ export class OutboxPublisherService {
 
     for (const event of events) {
       try {
-        await this.kafkaService.emit(event.eventType, event.payload);
+        await this.kafkaProducer.emit(event.eventType, event.payload);
+
         await this.outboxRepository.markSent(event.id, new Date());
       } catch (error) {
         const attempts = event.attempts + 1;

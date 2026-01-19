@@ -15,4 +15,15 @@ export class GatewayService {
     const response = await firstValueFrom(this.httpService.get(`${baseUrl}/health`));
     return response.data;
   }
+
+  async assignEnrollment(payload: Record<string, unknown>, headers: Record<string, string>) {
+    const baseUrl = this.configService.get<string>('ENROLLMENT_SERVICE_URL', 'http://localhost:3007');
+    const response = await firstValueFrom(
+      this.httpService.post(`${baseUrl}/api/v1/enrollments/assign`, payload, {
+        headers,
+      }),
+    );
+    return response.data;
+  }
 }
+

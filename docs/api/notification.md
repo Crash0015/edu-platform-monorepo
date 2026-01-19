@@ -49,6 +49,15 @@ Enqueue an email notification job.
 - Queue: `notifications.email`
 - Payload fields: `to`, `subject`, `body`, `correlationId`
 
+## 5) SMTP Configuration
+Set env vars for SMTP delivery:
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+
+
 ---
 
 ## 5) Observability

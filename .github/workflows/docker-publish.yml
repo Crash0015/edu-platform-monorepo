@@ -18,6 +18,9 @@ jobs:
           - automation-service
           - enrollment-service
           - search-service
+          - course-service
+          - user-service
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

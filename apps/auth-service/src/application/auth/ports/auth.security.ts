@@ -29,9 +29,11 @@ export interface TokenService {
   verifyRefreshToken(token: string): Promise<{ userId: string; familyId: string; jti: string }>;
   signMfaToken(input: { userId: string; email: string }): Promise<MfaTokenResult>;
   verifyMfaToken(token: string): Promise<{ userId: string; email: string }>;
+  verifyAccessToken(token: string): Promise<{ userId: string; email: string; roles: string[] }>;
   hashToken(token: string): string;
   generateRandomToken(): string;
 }
+
 
 export interface MfaService {
   createSetup(email: string): Promise<{

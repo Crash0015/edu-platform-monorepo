@@ -1,4 +1,5 @@
-import { CanActivate, ExecutionContext, Injectable, TooManyRequestsException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common';
+
 import { Reflector } from '@nestjs/core';
 import { RATE_LIMIT_KEY, RateLimitOptions } from '../decorators/rate-limit.decorator';
 import { CORRELATION_ID_HEADER } from '../constants/headers.constants';
@@ -33,10 +34,14 @@ export class RateLimitGuard implements CanActivate {
 
     if (!allowed) {
       const correlationId = request.correlationId ?? request.headers[CORRELATION_ID_HEADER];
-      throw new TooManyRequestsException({
-        message: 'Rate limit exceeded',
-        correlationId,
-      });
+      throw new HttpException(
+        {
+          message: 'Rate limit exceeded',
+          correlationId,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+
     }
 
     return true;

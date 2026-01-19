@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from '../../application/auth/auth.service';
 import {
@@ -28,7 +29,10 @@ import { JwtTokenService } from '../../infrastructure/security/token.service';
 import { EncryptionService } from '../../infrastructure/security/encryption.service';
 import { OtpMfaService } from '../../infrastructure/security/mfa.service';
 import { JwtStrategy } from '../../infrastructure/security/jwt.strategy';
+import { LocalStrategy } from '../../infrastructure/security/local.strategy';
+
 import { AuthController } from './auth.controller';
+
 import { RateLimitGuard } from '../../shared/guards/rate-limit.guard';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { RolesGuard } from '../../shared/guards/roles.guard';
@@ -44,22 +48,29 @@ import { RolesGuard } from '../../shared/guards/roles.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_ACCESS_SECRET', ''),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_ACCESS_EXPIRES_IN', '15m'),
-        },
-      }),
+      useFactory: (configService: ConfigService): JwtModuleOptions => {
+        const expiresIn = configService.get<string>('JWT_ACCESS_EXPIRES_IN', '15m');
+        return {
+          secret: configService.get<string>('JWT_ACCESS_SECRET', ''),
+          signOptions: {
+            expiresIn: expiresIn as import('jsonwebtoken').SignOptions['expiresIn'],
+          },
+        };
+      },
     }),
+
   ],
   controllers: [AuthController],
+
   providers: [
     AuthService,
     JwtStrategy,
+    LocalStrategy,
     EncryptionService,
     RateLimitGuard,
     JwtAuthGuard,
     RolesGuard,
+
     {
       provide: USER_REPOSITORY,
       useFactory: (prisma: PrismaService) => new PrismaUserRepository(prisma),
@@ -97,5 +108,7 @@ import { RolesGuard } from '../../shared/guards/roles.guard';
       useClass: OtpMfaService,
     },
   ],
+  exports: [AuthService],
+
 })
 export class AuthModule {}

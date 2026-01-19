@@ -9,9 +9,11 @@ describe('AuthService', () => {
   const userRepository = {
     findByEmail: jest.fn(),
     findById: jest.fn(),
+    create: jest.fn(),
     updateLastLogin: jest.fn(),
     updatePassword: jest.fn(),
   };
+
 
   const refreshTokenRepository = {
     findByTokenHash: jest.fn(),

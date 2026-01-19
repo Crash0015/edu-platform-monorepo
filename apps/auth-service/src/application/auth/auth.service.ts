@@ -21,8 +21,10 @@ import { EVENT_TYPES } from '../../shared/constants/events.constants';
 import { isInstitutionalEmail } from '../../shared/utils/email';
 import { parseDurationToSeconds } from '../../shared/utils/duration';
 import { RequestContext } from '../../shared/types/request-context';
-import { buildEventEnvelope } from './event.factory';
-import { AuthUser } from './auth.types';
+import { buildEventEnvelope } from '../shared/event.factory';
+
+import { AuthUser, LoginResult } from './auth.types';
+
 import { AuthUnitOfWork, MfaSecretRepository, PasswordResetTokenRepository, RefreshTokenRepository, UserRepository } from './ports/auth.repositories';
 import { MfaService, PasswordHasher, TokenService } from './ports/auth.security';
 
@@ -57,22 +59,10 @@ export class AuthService {
     );
   }
 
-  async login(input: { email: string; password: string }, context: RequestContext) {
-    const normalizedEmail = input.email.toLowerCase();
-    if (!isInstitutionalEmail(normalizedEmail)) {
-      throw new BadRequestException({
-        message: 'Validation failed',
-        details: ['email must end with @uce.edu.ec'],
-      });
-    }
+  async login(input: { email: string; password: string }, context: RequestContext): Promise<LoginResult> {
+    const user = await this.validateUser(input.email, input.password);
 
-    const user = await this.userRepository.findByEmail(normalizedEmail);
-    if (!user || user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const passwordValid = await this.passwordHasher.compare(input.password, user.passwordHash);
-    if (!passwordValid) {
+    if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -85,8 +75,91 @@ export class AuthService {
       };
     }
 
-    return this.issueTokens(user, context, 'PASSWORD');
+    const tokens = await this.issueTokens(user, context, 'PASSWORD');
+    return {
+      ...tokens,
+      mfaRequired: false,
+    };
   }
+
+  async register(input: { email: string; password: string; fullName: string; userType: AuthUser['userType'] }, context: RequestContext) {
+    const normalizedEmail = input.email.toLowerCase();
+    if (!isInstitutionalEmail(normalizedEmail)) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        details: ['email must end with @uce.edu.ec'],
+      });
+    }
+
+    const existing = await this.userRepository.findByEmail(normalizedEmail);
+    if (existing) {
+      throw new BadRequestException('User already exists');
+    }
+
+    const passwordHash = await this.passwordHasher.hash(input.password);
+
+    const user = await this.unitOfWork.execute(async (repositories) => {
+      const created = await repositories.userRepository.create({
+        email: normalizedEmail,
+        passwordHash,
+        fullName: input.fullName,
+        userType: input.userType,
+        status: 'ACTIVE',
+      });
+
+      const event = buildEventEnvelope({
+        eventType: EVENT_TYPES.USER_CREATED,
+        correlationId: context.correlationId,
+        actorUserId: created.id,
+        payload: {
+          user_id: created.id,
+          email: created.email,
+          user_type: created.userType,
+          status: created.status,
+        },
+      });
+
+      await repositories.outboxRepository.enqueue({
+        aggregateType: 'user',
+        aggregateId: created.id,
+        eventType: event.event_type,
+        eventVersion: event.event_version,
+        payload: event,
+      });
+
+      return created;
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      status: user.status,
+      userType: user.userType,
+    };
+  }
+
+  async validateUser(email: string, password: string): Promise<AuthUser | null> {
+    const normalizedEmail = email.toLowerCase();
+    if (!isInstitutionalEmail(normalizedEmail)) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        details: ['email must end with @uce.edu.ec'],
+      });
+    }
+
+    const user = await this.userRepository.findByEmail(normalizedEmail);
+    if (!user || user.status !== 'ACTIVE') {
+      return null;
+    }
+
+    const passwordValid = await this.passwordHasher.compare(password, user.passwordHash);
+    if (!passwordValid) {
+      return null;
+    }
+
+    return user;
+  }
+
 
   async loginWithMfa(input: { mfaToken: string; code: string }, context: RequestContext) {
     const payload = await this.tokenService.verifyMfaToken(input.mfaToken);
@@ -359,7 +432,12 @@ export class AuthService {
     return { message: 'MFA disabled successfully' };
   }
 
+  async verifyAccessToken(token: string) {
+    return this.tokenService.verifyAccessToken(token);
+  }
+
   private async issueTokens(user: AuthUser, context: RequestContext, loginMethod: 'PASSWORD' | 'REFRESH_TOKEN') {
+
     const accessToken = await this.tokenService.signAccessToken({
       userId: user.id,
       email: user.email,

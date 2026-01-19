@@ -33,12 +33,33 @@ export class PrismaUserRepository implements UserRepository {
     return user ? this.toAuthUser(user) : null;
   }
 
+  async create(input: {
+    email: string;
+    passwordHash: string;
+    fullName: string;
+    userType: AuthUser['userType'];
+    status: AuthUser['status'];
+  }): Promise<AuthUser> {
+    const { id: _id, ...data } = input as { id?: string } & typeof input;
+    const user = await this.prisma.user.create({
+      data,
+      include: {
+        roles: {
+          include: { role: true },
+        },
+        mfaSecret: true,
+      },
+    });
+    return this.toAuthUser(user);
+  }
+
   async updateLastLogin(userId: string, at: Date): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { lastLoginAt: at },
     });
   }
+
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
     await this.prisma.user.update({
