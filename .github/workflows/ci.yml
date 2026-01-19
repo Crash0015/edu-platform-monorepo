@@ -127,7 +127,10 @@ jobs:
             fi
             sleep 5
           done
-          echo "auth-service did not become healthy" && exit 1
+          echo "auth-service did not become healthy"
+          docker ps -a
+          docker logs edu-auth-service --tail 200 || true
+          exit 1
 
 
       - name: Seed auth user
