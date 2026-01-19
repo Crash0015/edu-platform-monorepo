@@ -1,18 +1,21 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as amqp from 'amqplib';
+import { Channel, Connection, connect } from 'amqplib';
+
 
 @Injectable()
 export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
-  private connection?: amqp.Connection;
-  private channel?: amqp.Channel;
+  private connection?: Connection;
+  private channel?: Channel;
+
 
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const url = this.configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672');
-    this.connection = await amqp.connect(url);
+    this.connection = await connect(url);
     this.channel = await this.connection.createChannel();
+
   }
 
   async onModuleDestroy() {
