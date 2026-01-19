@@ -96,11 +96,28 @@ jobs:
         working-directory: apps/auth-service
 
       - name: Start auth dependencies
-        run: docker compose -f infra/docker/docker-compose.local.yml up -d postgres redis zookeeper kafka auth-service
+        run: docker compose -f infra/docker/docker-compose.local.yml up -d postgres redis zookeeper kafka
+
+      - name: Wait for postgres
+        run: |
+          for i in {1..30}; do
+            if docker exec edu-postgres pg_isready -U edu -d authdb; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "postgres did not become ready" && exit 1
+
+      - name: Run auth migrations
+        run: DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npx prisma migrate deploy --schema prisma/schema.prisma
+        working-directory: apps/auth-service
+
+      - name: Start auth-service
+        run: docker compose -f infra/docker/docker-compose.local.yml up -d auth-service
 
       - name: Wait for auth-service
         run: |
-          for i in {1..30}; do
+          for i in {1..40}; do
             if curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health | grep -q "200"; then
               exit 0
             fi
@@ -108,9 +125,6 @@ jobs:
           done
           echo "auth-service did not become healthy" && exit 1
 
-      - name: Run auth migrations
-        run: DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npx prisma migrate deploy --schema prisma/schema.prisma
-        working-directory: apps/auth-service
 
       - name: Seed auth user
         run: |
