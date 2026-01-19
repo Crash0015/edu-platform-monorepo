@@ -96,7 +96,7 @@ jobs:
         working-directory: apps/auth-service
 
       - name: Start auth dependencies
-        run: docker compose -f infra/docker/docker-compose.local.yml up -d postgres redis zookeeper kafka
+        run: KAFKA_ENABLED=false docker compose -f infra/docker/docker-compose.local.yml up -d postgres redis
 
       - name: Wait for postgres
         run: |
@@ -113,7 +113,7 @@ jobs:
         working-directory: apps/auth-service
 
       - name: Start auth-service
-        run: docker compose -f infra/docker/docker-compose.local.yml up -d auth-service
+        run: KAFKA_ENABLED=false docker compose -f infra/docker/docker-compose.local.yml up -d auth-service
 
       - name: Wait for auth-service
         run: |

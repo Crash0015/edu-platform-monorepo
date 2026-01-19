@@ -110,6 +110,8 @@ services:
       CORS_ORIGINS: http://localhost:3000
       SWAGGER_ENABLED: "true"
       DATABASE_URL: postgresql://edu:edu@postgres:5432/authdb
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
     ports:
       - "3001:3001"
       - "50051:50051"
