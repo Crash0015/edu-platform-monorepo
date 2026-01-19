@@ -22,6 +22,8 @@ const defaultHeaders = {
 };
 
 let refreshToken = '';
+let loginFailures = 0;
+let refreshFailures = 0;
 
 function login() {
   const loginRes = http.post(`${baseUrl}/api/v1/auth/login`, loginPayload, {
@@ -33,6 +35,12 @@ function login() {
   });
 
   if (!loginOk) {
+    loginFailures += 1;
+    if (loginFailures <= 5) {
+      console.error(
+        `login failed: status=${loginRes.status} body=${JSON.stringify(loginRes.json())}`,
+      );
+    }
     return '';
   }
 
@@ -64,6 +72,12 @@ export default function () {
     const body = refreshRes.json();
     refreshToken = body?.refreshToken ?? refreshToken;
   } else {
+    refreshFailures += 1;
+    if (refreshFailures <= 5) {
+      console.error(
+        `refresh failed: status=${refreshRes.status} body=${JSON.stringify(refreshRes.json())}`,
+      );
+    }
     refreshToken = '';
   }
 
