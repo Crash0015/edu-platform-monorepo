@@ -39,6 +39,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prisma generate (auth/enrollment)
+        if: matrix.service == 'auth-service' || matrix.service == 'enrollment-service'
+        run: npm run prisma:generate
+
       - name: Lint (typecheck)
         run: npx tsc -p tsconfig.build.json --noEmit
 
