@@ -21,7 +21,7 @@ const defaultHeaders = {
   'X-Correlation-Id': 'k6-load-test',
 };
 
-export default function () {
+export function setup() {
   const loginRes = http.post(`${baseUrl}/api/v1/auth/login`, loginPayload, {
     headers: defaultHeaders,
   });
@@ -30,19 +30,29 @@ export default function () {
     'login status 200': (res) => res.status === 200,
   });
 
-  if (loginOk) {
-    const body = loginRes.json();
-    if (body && body.refreshToken) {
-      const refreshRes = http.post(
-        `${baseUrl}/api/v1/auth/refresh`,
-        JSON.stringify({ refreshToken: body.refreshToken }),
-        { headers: defaultHeaders },
-      );
-      check(refreshRes, {
-        'refresh status 200': (res) => res.status === 200,
-      });
-    }
+  if (!loginOk) {
+    throw new Error(`Login failed with status ${loginRes.status}`);
   }
+
+  const body = loginRes.json();
+  if (!body || !body.refreshToken) {
+    throw new Error('Refresh token missing from login response');
+  }
+
+  return { refreshToken: body.refreshToken };
+}
+
+export default function (data) {
+  const refreshRes = http.post(
+    `${baseUrl}/api/v1/auth/refresh`,
+    JSON.stringify({ refreshToken: data.refreshToken }),
+    { headers: defaultHeaders },
+  );
+
+  check(refreshRes, {
+    'refresh status 200': (res) => res.status === 200,
+  });
 
   sleep(1);
 }
+
