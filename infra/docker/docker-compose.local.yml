@@ -111,6 +111,10 @@ services:
       SWAGGER_ENABLED: "true"
       DATABASE_URL: postgresql://edu:edu@postgres:5432/authdb
       REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret}
+      TOKEN_HASH_SECRET: ${TOKEN_HASH_SECRET:-dev-hash-secret}
+      MFA_CHALLENGE_SECRET: ${MFA_CHALLENGE_SECRET:-dev-mfa-secret}
       KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
     ports:
