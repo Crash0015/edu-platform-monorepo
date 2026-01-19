@@ -63,8 +63,9 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`Auth gRPC listening on ${grpcPort}`);
+
 }
 
 
