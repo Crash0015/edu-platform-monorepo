@@ -115,6 +115,10 @@ jobs:
       - name: Start auth-service
         run: KAFKA_ENABLED=false docker compose -f infra/docker/docker-compose.local.yml up -d auth-service
 
+      - name: Show auth-service logs
+        if: failure()
+        run: docker logs edu-auth-service --tail 200
+
       - name: Wait for auth-service
         run: |
           for i in {1..40}; do
