@@ -115,7 +115,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret}
       TOKEN_HASH_SECRET: ${TOKEN_HASH_SECRET:-dev-hash-secret}
       MFA_CHALLENGE_SECRET: ${MFA_CHALLENGE_SECRET:-dev-mfa-secret}
-      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-dev-mfa-encryption-key-32bytes!!}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
       KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
       KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
     ports:
