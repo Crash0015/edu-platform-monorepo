@@ -35,13 +35,9 @@ describe('AuthService (e2e)', () => {
       .withExposedPorts(5432)
       .start();
 
-    redis = await new GenericContainer('redis:7')
-      .withExposedPorts(6379)
-      .start();
+    redis = await new GenericContainer('redis:7').withExposedPorts(6379).start();
 
-    const databaseUrl = `postgresql://test:test@${postgres.getHost()}:${postgres.getMappedPort(
-      5432,
-    )}/auth`;
+    const databaseUrl = `postgresql://test:test@${postgres.getHost()}:${postgres.getMappedPort(5432)}/auth`;
     const redisUrl = `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`;
 
     process.env.DATABASE_URL = databaseUrl;
@@ -66,6 +62,9 @@ describe('AuthService (e2e)', () => {
       stdio: 'inherit',
     });
 
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is required for PrismaClient');
+    }
     pool = new Pool({ connectionString: databaseUrl });
     const adapter = new PrismaPg(pool);
     prisma = new PrismaClient({ adapter });
@@ -74,7 +73,10 @@ describe('AuthService (e2e)', () => {
     const role = await prisma.role.upsert({
       where: { name: 'STUDENT' },
       update: {},
-      create: { name: 'STUDENT', description: 'Student' },
+      create: {
+        name: 'STUDENT',
+        description: 'Student',
+      },
     });
 
     const passwordHash = await bcrypt.hash('Password123!', 10);
