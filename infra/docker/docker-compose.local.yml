@@ -109,6 +109,7 @@ services:
       GRPC_PORT: 50051
       CORS_ORIGINS: http://localhost:3000
       SWAGGER_ENABLED: "true"
+      DATABASE_URL: postgresql://edu:edu@postgres:5432/authdb
     ports:
       - "3001:3001"
       - "50051:50051"
@@ -118,6 +119,7 @@ services:
       - kafka
     networks:
       - edu-net
+
 
   # =========================
   # User Service
@@ -212,8 +214,7 @@ services:
       context: ../../apps/notification-service
       dockerfile: Dockerfile
     container_name: edu-notification-service
-    env_file:
-      - ../../apps/notification-service/.env
+
     environment:
       NODE_ENV: development
       PORT: 3005
