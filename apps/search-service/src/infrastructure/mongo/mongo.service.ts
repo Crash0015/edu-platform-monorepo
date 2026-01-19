@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, Document, MongoClient } from 'mongodb';
+
 
 @Injectable()
 export class MongoService implements OnModuleInit, OnModuleDestroy {
@@ -25,7 +26,8 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  collection<T>(name: string): Collection<T> {
+  collection<T extends Document>(name: string): Collection<T> {
+
     if (!this.client) {
       throw new Error('Mongo client not initialized');
     }

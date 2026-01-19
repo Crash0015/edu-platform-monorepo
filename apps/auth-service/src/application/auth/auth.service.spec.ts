@@ -52,6 +52,7 @@ describe('AuthService', () => {
   const tokenService = {
     signAccessToken: jest.fn(),
     signRefreshToken: jest.fn(),
+    verifyAccessToken: jest.fn(),
     verifyRefreshToken: jest.fn(),
     signMfaToken: jest.fn(),
     verifyMfaToken: jest.fn(),
