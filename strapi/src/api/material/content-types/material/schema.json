@@ -1,0 +1,57 @@
+{
+  "kind": "collectionType",
+  "collectionName": "materials",
+  "info": {
+    "singularName": "material",
+    "pluralName": "materials",
+    "displayName": "Material",
+    "description": "Educational materials linked to courses"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "courseId": {
+      "type": "string",
+      "required": true
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "PDF",
+        "LINK",
+        "VIDEO"
+      ],
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "DRAFT",
+        "PUBLISHED",
+        "ARCHIVED"
+      ],
+      "required": true
+    },
+    "resourceUrl": {
+      "type": "string",
+      "required": true
+    },
+    "thumbnailUrl": {
+      "type": "string"
+    },
+    "durationMinutes": {
+      "type": "integer"
+    },
+    "publishedAt": {
+      "type": "datetime"
+    }
+  }
+}
