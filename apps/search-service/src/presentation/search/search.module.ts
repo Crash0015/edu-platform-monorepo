@@ -3,10 +3,9 @@ import { SearchController } from './search.controller';
 import { ProjectionService, PROJECTION_REPOSITORY } from '../../application/search/projection.service';
 import { MongoModule } from '../../infrastructure/mongo/mongo.module';
 import { MongoProjectionRepository } from '../../infrastructure/mongo/projection.repository';
-import { KafkaModule } from '../../infrastructure/kafka/kafka.module';
 
 @Module({
-  imports: [MongoModule, KafkaModule],
+  imports: [MongoModule],
   controllers: [SearchController],
   providers: [
     ProjectionService,
@@ -15,5 +14,6 @@ import { KafkaModule } from '../../infrastructure/kafka/kafka.module';
       useClass: MongoProjectionRepository,
     },
   ],
+  exports: [ProjectionService],
 })
 export class SearchModule {}

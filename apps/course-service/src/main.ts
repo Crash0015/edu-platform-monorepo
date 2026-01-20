@@ -3,9 +3,11 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.enableShutdownHooks();
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3004);
 
@@ -34,18 +36,22 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalFilters(new HttpExceptionFilter());
+
   const swaggerEnabled = configService.get<string>('SWAGGER_ENABLED', 'true') !== 'false';
   if (swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Course Service')
       .setDescription('Course service for UCE platform')
       .setVersion('1.0')
+      .addBearerAuth()
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('api/docs', app, document);
   }
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Course Service listening on port ${port}`);
 }
 
 bootstrap();

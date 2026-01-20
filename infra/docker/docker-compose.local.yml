@@ -36,6 +36,57 @@ services:
       - edu-net
 
   # =========================
+  # PostgreSQL (Course)
+  # =========================
+  postgres-course:
+    image: postgres:16
+    container_name: edu-postgres-course
+    environment:
+      POSTGRES_USER: edu
+      POSTGRES_PASSWORD: edu
+      POSTGRES_DB: coursedb
+    ports:
+      - "5435:5432"
+    volumes:
+      - pg_course_data:/var/lib/postgresql/data
+    networks:
+      - edu-net
+
+  # =========================
+  # PostgreSQL (Schedule)
+  # =========================
+  postgres-schedule:
+    image: postgres:16
+    container_name: edu-postgres-schedule
+    environment:
+      POSTGRES_USER: edu
+      POSTGRES_PASSWORD: edu
+      POSTGRES_DB: scheduledb
+    ports:
+      - "5436:5432"
+    volumes:
+      - pg_schedule_data:/var/lib/postgresql/data
+    networks:
+      - edu-net
+
+  # =========================
+  # PostgreSQL (Tutoring)
+  # =========================
+  postgres-tutoring:
+    image: postgres:16
+    container_name: edu-postgres-tutoring
+    environment:
+      POSTGRES_USER: edu
+      POSTGRES_PASSWORD: edu
+      POSTGRES_DB: tutoringdb
+    ports:
+      - "5437:5432"
+    volumes:
+      - pg_tutoring_data:/var/lib/postgresql/data
+    networks:
+      - edu-net
+
+  # =========================
   # MongoDB (Audit / Events)
   # =========================
   mongo:
@@ -83,7 +134,7 @@ services:
       - zookeeper
     ports:
       - "9092:9092"
-      - "29092:29092" # Puerto extra para acceso externo (si usas tools UI)
+      - "29092:29092" # Puerto extra para acceso externo
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -167,8 +218,15 @@ services:
       PORT: 3004
       CORS_ORIGINS: http://localhost:3000
       SWAGGER_ENABLED: "true"
+      DATABASE_URL: postgresql://edu:edu@postgres-course:5432/coursedb
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: course-service
+      KAFKA_ENABLED: "true"
     ports:
       - "3004:3004"
+    depends_on:
+      - postgres-course
+      - kafka
     networks:
       - edu-net
 
@@ -187,10 +245,25 @@ services:
       SWAGGER_ENABLED: "true"
       AUTH_SERVICE_URL: http://auth-service:3001
       ENROLLMENT_SERVICE_URL: http://enrollment-service:3007
+      COURSE_SERVICE_URL: http://course-service:3004
+      USER_SERVICE_URL: http://user-service:3008
+      NOTIFICATION_SERVICE_URL: http://notification-service:3005
+      AUTOMATION_SERVICE_URL: http://automation-service:3006
+      SCHEDULE_SERVICE_URL: http://schedule-service:3009
+      TUTORING_SERVICE_URL: http://tutoring-service:3010
+      SEARCH_SERVICE_URL: http://search-service:3011
+      MATERIAL_SERVICE_URL: http://material-service:3012
     ports:
       - "3000:3000"
     depends_on:
       - enrollment-service
+      - course-service
+      - user-service
+      - notification-service
+      - automation-service
+      - schedule-service
+      - tutoring-service
+      - material-service
     networks:
       - edu-net
 
@@ -217,6 +290,108 @@ services:
       - "3007:3007"
     depends_on:
       - postgres-enrollment
+      - kafka
+    networks:
+      - edu-net
+
+  # =========================
+  # Schedule Service
+  # =========================
+  schedule-service:
+    build:
+      context: ../../apps/schedule-service
+      dockerfile: Dockerfile
+    container_name: edu-schedule-service
+    environment:
+      NODE_ENV: development
+      PORT: 3009
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      DATABASE_URL: postgresql://edu:edu@postgres-schedule:5432/scheduledb
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: schedule-service
+      KAFKA_ENABLED: "true"
+    ports:
+      - "3009:3009"
+    depends_on:
+      - postgres-schedule
+      - kafka
+    networks:
+      - edu-net
+
+  # =========================
+  # Tutoring Service
+  # =========================
+  tutoring-service:
+    build:
+      context: ../../apps/tutoring-service
+      dockerfile: Dockerfile
+    container_name: edu-tutoring-service
+    environment:
+      NODE_ENV: development
+      PORT: 3010
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      DATABASE_URL: postgresql://edu:edu@postgres-tutoring:5432/tutoringdb
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: tutoring-service
+      KAFKA_ENABLED: "true"
+      SCHEDULE_SERVICE_URL: http://schedule-service:3009
+    ports:
+      - "3010:3010"
+    depends_on:
+      - postgres-tutoring
+      - schedule-service
+      - kafka
+    networks:
+      - edu-net
+
+  # =========================
+  # Search Service
+  # =========================
+  search-service:
+    build:
+      context: ../../apps/search-service
+      dockerfile: Dockerfile
+    container_name: edu-search-service
+    environment:
+      NODE_ENV: development
+      PORT: 3011
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      MONGO_URL: mongodb://mongo:27017/search
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: search-service
+      KAFKA_ENABLED: "true"
+    ports:
+      - "3011:3011"
+    depends_on:
+      - mongo
+      - kafka
+    networks:
+      - edu-net
+
+  # =========================
+  # Material Service
+  # =========================
+  material-service:
+    build:
+      context: ../../apps/material-service
+      dockerfile: Dockerfile
+    container_name: edu-material-service
+    environment:
+      NODE_ENV: development
+      PORT: 3012
+      CORS_ORIGINS: http://localhost:3000
+      SWAGGER_ENABLED: "true"
+      STRAPI_URL: ${STRAPI_URL:-http://host.docker.internal:1337}
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: material-service
+      KAFKA_ENABLED: "true"
+    ports:
+      - "3012:3012"
+    depends_on:
       - kafka
     networks:
       - edu-net
@@ -319,3 +494,6 @@ volumes:
   pg_data:
   mongo_data:
   pg_enrollment_data:
+  pg_course_data:
+  pg_schedule_data:
+  pg_tutoring_data:

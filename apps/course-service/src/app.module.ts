@@ -1,16 +1,20 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { HealthController } from './presentation/health.controller';
-import { CoursesController } from './presentation/courses.controller';
-import { CoursesService } from './application/courses.service';
+import { CoursesModule } from './presentation/courses/courses.module';
+import { HealthModule } from './presentation/health/health.module';
+import { CorrelationIdMiddleware } from './shared/middleware/correlation-id.middleware';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    CoursesModule,
+    HealthModule,
   ],
-  controllers: [HealthController, CoursesController],
-  providers: [CoursesService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TutoringSessionStatus {
+  OPEN
+  RESERVED
+  CANCELLED
+  DONE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum TutoringMode {
+  ONLINE
+  IN_PERSON
+}
+
+model TutoringSession {
+  id                 String                @id @default(uuid()) @db.Uuid
+  teacherId          String                @map("teacher_id") @db.Uuid
+  courseId           String                @map("course_id") @db.Uuid
+  availabilitySlotId String                @unique @map("availability_slot_id") @db.Uuid
+  startTime          DateTime              @map("start_time") @db.Timestamptz(6)
+  endTime            DateTime              @map("end_time") @db.Timestamptz(6)
+  mode               TutoringMode           @default(ONLINE) @map("mode")
+  location           String?               @db.Text
+  meetingUrl         String?               @map("meeting_url") @db.Text
+  status             TutoringSessionStatus @default(OPEN)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String?               @map("created_by") @db.Uuid
+  updatedBy          String?               @map("updated_by") @db.Uuid
+  isDeleted          Boolean               @default(false) @map("is_deleted")
+  deletedAt          DateTime?             @map("deleted_at") @db.Timestamptz(6)
+  booking            Booking?
+
+  @@index([teacherId], map: "idx_tutoring_sessions_teacher_id")
+  @@index([courseId], map: "idx_tutoring_sessions_course_id")
+  @@index([status], map: "idx_tutoring_sessions_status")
+  @@index([startTime], map: "idx_tutoring_sessions_start_time")
+  @@index([endTime], map: "idx_tutoring_sessions_end_time")
+  @@map("tutoring_sessions")
+}
+
+model Booking {
+  id                String         @id @default(uuid()) @db.Uuid
+  tutoringSessionId String         @unique @map("tutoring_session_id") @db.Uuid
+  studentId         String         @map("student_id") @db.Uuid
+  status            BookingStatus  @default(PENDING)
+  reservedAt        DateTime       @default(now()) @map("reserved_at") @db.Timestamptz(6)
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy         String?        @map("created_by") @db.Uuid
+  updatedBy         String?        @map("updated_by") @db.Uuid
+  tutoringSession   TutoringSession @relation(fields: [tutoringSessionId], references: [id], onDelete: Cascade)
+
+  @@index([studentId], map: "idx_bookings_student_id")
+  @@index([status], map: "idx_bookings_status")
+  @@map("bookings")
+}

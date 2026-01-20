@@ -7,8 +7,22 @@ import { EnrollmentRepository } from './ports/enrollment.repository';
 
 export const ENROLLMENT_REPOSITORY = Symbol('ENROLLMENT_REPOSITORY');
 
-type UserSummary = { id: string; status: 'ACTIVE' | 'SUSPENDED'; userType: 'STUDENT' | 'TEACHER' | 'ADMIN' };
-type CourseSummary = { id: string; capacity: number; seatsTaken: number; status: 'OPEN' | 'CLOSED' };
+type UserSummary = { 
+  id: string; 
+  email: string;
+  status: 'ACTIVE' | 'SUSPENDED'; 
+  userType: 'STUDENT' | 'TEACHER' | 'ADMIN' 
+};
+
+type CourseSummary = { 
+  id: string; 
+  code: string;
+  name: string;
+  description: string | null;
+  capacity: number; 
+  seatsTaken: number; 
+  status: 'OPEN' | 'CLOSED' 
+};
 
 @Injectable()
 export class EnrollmentService {
@@ -90,6 +104,50 @@ export class EnrollmentService {
     } catch {
       return null;
     }
+  }
+
+  async getEnrollmentsByStudent(studentId: string, context: { actorUserId: string | null; actorRoles: string[] }) {
+    // Allow if requesting own enrollments or if teacher/admin
+    if (context.actorUserId !== studentId && !context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN')) {
+      throw new UnauthorizedException('Not authorized to view these enrollments');
+    }
+
+    const enrollments = await this.enrollmentRepository.getEnrollmentsByStudent(studentId);
+    
+    // Fetch course details for each enrollment
+    const enrollmentsWithCourses = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const course = await this.fetchCourse(enrollment.courseId);
+        return {
+          ...enrollment,
+          course: course || null,
+        };
+      }),
+    );
+
+    return enrollmentsWithCourses;
+  }
+
+  async getEnrollmentsByCourse(courseId: string, context: { actorUserId: string | null; actorRoles: string[] }) {
+    // Only teachers and admins can view enrollments for a course
+    if (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN')) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+
+    const enrollments = await this.enrollmentRepository.getEnrollmentsByCourse(courseId);
+    
+    // Fetch student details for each enrollment
+    const enrollmentsWithStudents = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const student = await this.fetchUser(enrollment.studentId);
+        return {
+          ...enrollment,
+          student: student || null,
+        };
+      }),
+    );
+
+    return enrollmentsWithStudents;
   }
 }
 

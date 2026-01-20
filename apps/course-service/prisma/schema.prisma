@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+  OPEN
+  CLOSED
+}
+
+enum TeacherRoleInCourse {
+  OWNER
+  ASSISTANT
+}
+
+model AcademicPeriod {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(50)
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  courses   Course[]
+
+  @@map("academic_periods")
+}
+
+model Course {
+  id          String           @id @default(uuid()) @db.Uuid
+  code        String           @unique @db.VarChar(30)
+  name        String           @db.VarChar(120)
+  description String?          @db.Text
+  periodId    String?          @map("period_id") @db.Uuid
+  status      CourseStatus     @default(ACTIVE)
+  capacity    Int              @default(30)
+  seatsTaken  Int              @default(0) @map("seats_taken")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String?          @map("created_by") @db.Uuid
+  updatedBy   String?          @map("updated_by") @db.Uuid
+  isDeleted   Boolean          @default(false) @map("is_deleted")
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  period      AcademicPeriod?  @relation(fields: [periodId], references: [id])
+  teachers    TeacherCourse[]
+
+  @@index([status], map: "idx_courses_status")
+  @@index([periodId], map: "idx_courses_period_id")
+  @@index([code], map: "idx_courses_code")
+  @@map("courses")
+}
+
+model TeacherCourse {
+  id           String              @id @default(uuid()) @db.Uuid
+  teacherId    String              @map("teacher_id") @db.Uuid
+  courseId     String              @map("course_id") @db.Uuid
+  roleInCourse TeacherRoleInCourse @default(OWNER) @map("role_in_course")
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String?             @map("created_by") @db.Uuid
+  updatedBy    String?             @map("updated_by") @db.Uuid
+  course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, courseId], map: "uniq_teacher_course")
+  @@index([teacherId], map: "idx_teacher_courses_teacher_id")
+  @@index([courseId], map: "idx_teacher_courses_course_id")
+  @@map("teacher_courses")
+}

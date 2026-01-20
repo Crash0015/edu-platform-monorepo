@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  BLOCKED
+}
+
+model AvailabilitySlot {
+  id        String             @id @default(uuid()) @db.Uuid
+  teacherId String             @map("teacher_id") @db.Uuid
+  courseId  String?            @map("course_id") @db.Uuid
+  startTime DateTime           @map("start_time") @db.Timestamptz(6)
+  endTime   DateTime           @map("end_time") @db.Timestamptz(6)
+  timezone  String             @db.VarChar(60)
+  status    AvailabilityStatus @default(AVAILABLE)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String?            @map("created_by") @db.Uuid
+  updatedBy String?            @map("updated_by") @db.Uuid
+  isDeleted Boolean            @default(false) @map("is_deleted")
+  deletedAt DateTime?          @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([teacherId], map: "idx_availability_slots_teacher_id")
+  @@index([startTime], map: "idx_availability_slots_start_time")
+  @@index([endTime], map: "idx_availability_slots_end_time")
+  @@index([status], map: "idx_availability_slots_status")
+  @@map("availability_slots")
+}
