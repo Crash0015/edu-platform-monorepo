@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -11,13 +11,13 @@ export class GatewayService {
   ) {}
 
   async getAuthHealth() {
-    return this.getFromService('AUTH_SERVICE_URL', 'http://localhost:3001', '/health');
+    return this.getFromService('AUTH_SERVICE_URL', 'http://127.0.0.1:3001', '/health');
   }
 
   async login(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/login',
       payload,
       headers,
@@ -27,7 +27,7 @@ export class GatewayService {
   async register(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/register',
       payload,
       headers,
@@ -37,7 +37,7 @@ export class GatewayService {
   async loginMfa(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/login/mfa',
       payload,
       headers,
@@ -47,7 +47,7 @@ export class GatewayService {
   async refresh(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/refresh',
       payload,
       headers,
@@ -57,7 +57,7 @@ export class GatewayService {
   async logout(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/logout',
       payload,
       headers,
@@ -67,7 +67,7 @@ export class GatewayService {
   async forgotPassword(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/password/forgot',
       payload,
       headers,
@@ -77,7 +77,7 @@ export class GatewayService {
   async resetPassword(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/password/reset',
       payload,
       headers,
@@ -87,7 +87,7 @@ export class GatewayService {
   async me(headers: Record<string, string>) {
     return this.getFromService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/me',
       headers,
     );
@@ -96,7 +96,7 @@ export class GatewayService {
   async setupMfa(headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/mfa/setup',
       {},
       headers,
@@ -106,7 +106,7 @@ export class GatewayService {
   async verifyMfa(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/mfa/verify',
       payload,
       headers,
@@ -116,7 +116,7 @@ export class GatewayService {
   async disableMfa(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
-      'http://localhost:3001',
+      'http://127.0.0.1:3001',
       '/api/v1/auth/mfa/disable',
       payload,
       headers,
@@ -126,7 +126,7 @@ export class GatewayService {
   async assignEnrollment(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'ENROLLMENT_SERVICE_URL',
-      'http://localhost:3007',
+      'http://127.0.0.1:3007',
       '/api/v1/enrollments/assign',
       payload,
       headers,
@@ -136,7 +136,7 @@ export class GatewayService {
   async getCourse(id: string, headers: Record<string, string>) {
     return this.getFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/${id}`,
       headers,
     );
@@ -145,7 +145,7 @@ export class GatewayService {
   async getCourseByCode(code: string, headers: Record<string, string>) {
     return this.getFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/code/${code}`,
       headers,
     );
@@ -154,7 +154,7 @@ export class GatewayService {
   async listCourses(params: Record<string, string>, headers: Record<string, string>) {
     return this.getFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       '/api/v1/courses',
       headers,
       params,
@@ -164,7 +164,7 @@ export class GatewayService {
   async createCourse(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       '/api/v1/courses',
       payload,
       headers,
@@ -174,7 +174,7 @@ export class GatewayService {
   async updateCourse(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.patchToService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/${id}`,
       payload,
       headers,
@@ -184,8 +184,28 @@ export class GatewayService {
   async deleteCourse(id: string, headers: Record<string, string>) {
     return this.deleteFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/${id}`,
+      headers,
+    );
+  }
+
+  async incrementCourseSeats(id: string, headers: Record<string, string>) {
+    return this.postToService(
+      'COURSE_SERVICE_URL',
+      'http://127.0.0.1:3004',
+      `/api/v1/courses/${id}/seats/increment`,
+      {},
+      headers,
+    );
+  }
+
+  async decrementCourseSeats(id: string, headers: Record<string, string>) {
+    return this.postToService(
+      'COURSE_SERVICE_URL',
+      'http://127.0.0.1:3004',
+      `/api/v1/courses/${id}/seats/decrement`,
+      {},
       headers,
     );
   }
@@ -193,7 +213,7 @@ export class GatewayService {
   async getCoursesByTeacher(teacherId: string, headers: Record<string, string>) {
     return this.getFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/teachers/${teacherId}`,
       headers,
     );
@@ -202,7 +222,7 @@ export class GatewayService {
   async assignTeacher(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       '/api/v1/courses/teachers/assign',
       payload,
       headers,
@@ -212,7 +232,7 @@ export class GatewayService {
   async getTeachersByCourse(courseId: string, headers: Record<string, string>) {
     return this.getFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/${courseId}/teachers`,
       headers,
     );
@@ -221,7 +241,7 @@ export class GatewayService {
   async removeTeacherFromCourse(courseId: string, teacherId: string, headers: Record<string, string>) {
     return this.deleteFromService(
       'COURSE_SERVICE_URL',
-      'http://localhost:3004',
+      'http://127.0.0.1:3004',
       `/api/v1/courses/${courseId}/teachers/${teacherId}`,
       headers,
     );
@@ -230,7 +250,7 @@ export class GatewayService {
   async getUser(id: string, headers: Record<string, string>) {
     return this.getFromService(
       'USER_SERVICE_URL',
-      'http://localhost:3008',
+      'http://127.0.0.1:3008',
       `/api/v1/users/${id}`,
       headers,
     );
@@ -239,7 +259,7 @@ export class GatewayService {
   async enqueueEmail(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'NOTIFICATION_SERVICE_URL',
-      'http://localhost:3005',
+      'http://127.0.0.1:3005',
       '/api/v1/notifications/email',
       payload,
       headers,
@@ -249,7 +269,7 @@ export class GatewayService {
   async queueAutomation(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTOMATION_SERVICE_URL',
-      'http://localhost:3006',
+      'http://127.0.0.1:3006',
       '/api/v1/automation/queue',
       payload,
       headers,
@@ -259,7 +279,7 @@ export class GatewayService {
   async publishAutomation(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'AUTOMATION_SERVICE_URL',
-      'http://localhost:3006',
+      'http://127.0.0.1:3006',
       '/api/v1/automation/publish',
       payload,
       headers,
@@ -269,7 +289,7 @@ export class GatewayService {
   async listEnrollmentsByStudent(studentId: string, headers: Record<string, string>) {
     return this.getFromService(
       'ENROLLMENT_SERVICE_URL',
-      'http://localhost:3007',
+      'http://127.0.0.1:3007',
       `/api/v1/enrollments/students/${studentId}`,
       headers,
     );
@@ -278,7 +298,7 @@ export class GatewayService {
   async listEnrollmentsByCourse(courseId: string, headers: Record<string, string>) {
     return this.getFromService(
       'ENROLLMENT_SERVICE_URL',
-      'http://localhost:3007',
+      'http://127.0.0.1:3007',
       `/api/v1/enrollments/courses/${courseId}`,
       headers,
     );
@@ -287,7 +307,7 @@ export class GatewayService {
   async listScheduleAvailability(teacherId: string, params: Record<string, string>, headers: Record<string, string>) {
     return this.getFromService(
       'SCHEDULE_SERVICE_URL',
-      'http://localhost:3009',
+      'http://127.0.0.1:3009',
       `/api/v1/schedule/availability/teacher/${teacherId}`,
       headers,
       params,
@@ -297,7 +317,7 @@ export class GatewayService {
   async createScheduleAvailability(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'SCHEDULE_SERVICE_URL',
-      'http://localhost:3009',
+      'http://127.0.0.1:3009',
       '/api/v1/schedule/availability',
       payload,
       headers,
@@ -307,8 +327,22 @@ export class GatewayService {
   async deleteScheduleAvailability(id: string, headers: Record<string, string>) {
     return this.deleteFromService(
       'SCHEDULE_SERVICE_URL',
-      'http://localhost:3009',
+      'http://127.0.0.1:3009',
       `/api/v1/schedule/availability/${id}`,
+      headers,
+    );
+  }
+
+  async updateScheduleAvailabilityStatus(
+    id: string,
+    payload: Record<string, unknown>,
+    headers: Record<string, string>,
+  ) {
+    return this.postToService(
+      'SCHEDULE_SERVICE_URL',
+      'http://127.0.0.1:3009',
+      `/api/v1/schedule/availability/${id}/status`,
+      payload,
       headers,
     );
   }
@@ -316,7 +350,7 @@ export class GatewayService {
   async listAvailableSessions(params: Record<string, string>, headers: Record<string, string>) {
     return this.getFromService(
       'TUTORING_SERVICE_URL',
-      'http://localhost:3010',
+      'http://127.0.0.1:3010',
       '/api/v1/tutoring/sessions/available',
       headers,
       params,
@@ -326,7 +360,7 @@ export class GatewayService {
   async reserveSession(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'TUTORING_SERVICE_URL',
-      'http://localhost:3010',
+      'http://127.0.0.1:3010',
       '/api/v1/tutoring/sessions/reserve',
       payload,
       headers,
@@ -336,7 +370,7 @@ export class GatewayService {
   async cancelSession(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'TUTORING_SERVICE_URL',
-      'http://localhost:3010',
+      'http://127.0.0.1:3010',
       '/api/v1/tutoring/sessions/cancel',
       payload,
       headers,
@@ -346,7 +380,7 @@ export class GatewayService {
   async getSessionById(id: string, headers: Record<string, string>) {
     return this.getFromService(
       'TUTORING_SERVICE_URL',
-      'http://localhost:3010',
+      'http://127.0.0.1:3010',
       `/api/v1/tutoring/sessions/${id}`,
       headers,
     );
@@ -355,7 +389,7 @@ export class GatewayService {
   async getSearchEnrollments(studentId: string, headers: Record<string, string>) {
     return this.getFromService(
       'SEARCH_SERVICE_URL',
-      'http://localhost:3011',
+      'http://127.0.0.1:3011',
       `/api/v1/search/enrollments/${studentId}`,
       headers,
     );
@@ -364,7 +398,7 @@ export class GatewayService {
   async listMaterials(params: Record<string, string>, headers: Record<string, string>) {
     return this.getFromService(
       'MATERIAL_SERVICE_URL',
-      'http://localhost:3012',
+      'http://127.0.0.1:3012',
       '/api/v1/materials',
       headers,
       params,
@@ -374,7 +408,7 @@ export class GatewayService {
   async getMaterial(id: string, headers: Record<string, string>) {
     return this.getFromService(
       'MATERIAL_SERVICE_URL',
-      'http://localhost:3012',
+      'http://127.0.0.1:3012',
       `/api/v1/materials/${id}`,
       headers,
     );
@@ -383,7 +417,7 @@ export class GatewayService {
   async createMaterial(payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.postToService(
       'MATERIAL_SERVICE_URL',
-      'http://localhost:3012',
+      'http://127.0.0.1:3012',
       '/api/v1/materials',
       payload,
       headers,
@@ -393,7 +427,7 @@ export class GatewayService {
   async updateMaterial(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.patchToService(
       'MATERIAL_SERVICE_URL',
-      'http://localhost:3012',
+      'http://127.0.0.1:3012',
       `/api/v1/materials/${id}`,
       payload,
       headers,
@@ -403,7 +437,7 @@ export class GatewayService {
   async deleteMaterial(id: string, headers: Record<string, string>) {
     return this.deleteFromService(
       'MATERIAL_SERVICE_URL',
-      'http://localhost:3012',
+      'http://127.0.0.1:3012',
       `/api/v1/materials/${id}`,
       headers,
     );
@@ -412,11 +446,140 @@ export class GatewayService {
   async publishMaterial(id: string, headers: Record<string, string>) {
     return this.postToService(
       'MATERIAL_SERVICE_URL',
-      'http://localhost:3012',
+      'http://127.0.0.1:3012',
       `/api/v1/materials/${id}/publish`,
       {},
       headers,
     );
+  }
+
+  async listAdminUsers(params: Record<string, string>, headers: Record<string, string>) {
+    return this.getFromService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      '/api/v1/admin/users',
+      headers,
+      params,
+    );
+  }
+
+  async createAdminUser(payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.postToService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      '/api/v1/admin/users',
+      payload,
+      headers,
+    );
+  }
+
+  async getAdminUser(id: string, headers: Record<string, string>) {
+    return this.getFromService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      `/api/v1/admin/users/${id}`,
+      headers,
+    );
+  }
+
+  async updateAdminUserStatus(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.patchToService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      `/api/v1/admin/users/${id}/status`,
+      payload,
+      headers,
+    );
+  }
+
+  async updateAdminUserType(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.patchToService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      `/api/v1/admin/users/${id}/type`,
+      payload,
+      headers,
+    );
+  }
+
+  async resetAdminUserMfa(id: string, headers: Record<string, string>) {
+    return this.postToService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      `/api/v1/admin/users/${id}/mfa/reset`,
+      {},
+      headers,
+    );
+  }
+
+  async getAdminUsersReport(headers: Record<string, string>) {
+    return this.getFromService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      '/api/v1/admin/reports/users',
+      headers,
+    );
+  }
+
+  async listAdminEnrollments(headers: Record<string, string>) {
+    return this.getFromService(
+      'ENROLLMENT_SERVICE_URL',
+      'http://127.0.0.1:3007',
+      '/api/v1/enrollments',
+      headers,
+    );
+  }
+
+  async listAdminAvailability(params: Record<string, string>, headers: Record<string, string>) {
+    return this.getFromService(
+      'SCHEDULE_SERVICE_URL',
+      'http://127.0.0.1:3009',
+      '/api/v1/schedule/availability',
+      headers,
+      params,
+    );
+  }
+
+  async listAdminTutoringSessions(headers: Record<string, string>) {
+    return this.getFromService(
+      'TUTORING_SERVICE_URL',
+      'http://127.0.0.1:3010',
+      '/api/v1/tutoring/sessions',
+      headers,
+    );
+  }
+
+  async listAdminTutoringBookings(headers: Record<string, string>) {
+    return this.getFromService(
+      'TUTORING_SERVICE_URL',
+      'http://127.0.0.1:3010',
+      '/api/v1/tutoring/bookings',
+      headers,
+    );
+  }
+
+  async getAdminSummary(headers: Record<string, string>) {
+    const [usersReport, courses, enrollments, materials, availability, sessions, bookings] = await Promise.all([
+      this.getAdminUsersReport(headers),
+      this.listCourses({}, headers),
+      this.listAdminEnrollments(headers),
+      this.listMaterials({}, headers),
+      this.listAdminAvailability({}, headers),
+      this.listAdminTutoringSessions(headers),
+      this.listAdminTutoringBookings(headers),
+    ]);
+
+    return {
+      users: usersReport,
+      counts: {
+        courses: Array.isArray(courses) ? courses.length : 0,
+        enrollments: Array.isArray(enrollments) ? enrollments.length : 0,
+        materials: Array.isArray(materials) ? materials.length : 0,
+        availability: Array.isArray(availability) ? availability.length : 0,
+        tutoringSessions: Array.isArray(sessions) ? sessions.length : 0,
+        tutoringBookings: Array.isArray(bookings) ? bookings.length : 0,
+      },
+    };
   }
 
   private getServiceUrl(key: string, fallback: string) {
@@ -431,10 +594,14 @@ export class GatewayService {
     headers: Record<string, string>,
   ) {
     const baseUrl = this.getServiceUrl(key, fallback);
-    const response = await firstValueFrom(
-      this.httpService.post(`${baseUrl}${path}`, payload, { headers }),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${baseUrl}${path}`, payload, { headers }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
   }
 
   private async getFromService(
@@ -445,10 +612,14 @@ export class GatewayService {
     params: Record<string, string> = {},
   ) {
     const baseUrl = this.getServiceUrl(key, fallback);
-    const response = await firstValueFrom(
-      this.httpService.get(`${baseUrl}${path}`, { headers, params }),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${baseUrl}${path}`, { headers, params }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
   }
 
   private async patchToService(
@@ -459,10 +630,14 @@ export class GatewayService {
     headers: Record<string, string>,
   ) {
     const baseUrl = this.getServiceUrl(key, fallback);
-    const response = await firstValueFrom(
-      this.httpService.patch(`${baseUrl}${path}`, payload, { headers }),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.patch(`${baseUrl}${path}`, payload, { headers }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
   }
 
   private async deleteFromService(
@@ -472,9 +647,25 @@ export class GatewayService {
     headers: Record<string, string>,
   ) {
     const baseUrl = this.getServiceUrl(key, fallback);
-    const response = await firstValueFrom(
-      this.httpService.delete(`${baseUrl}${path}`, { headers }),
-    );
-    return response.data;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.delete(`${baseUrl}${path}`, { headers }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
+  }
+
+  private handleProxyError(error: unknown): never {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = (error as { response?: { status?: number; data?: unknown } }).response;
+      if (response?.status) {
+        const payload = response.data ?? { message: 'Upstream service error' };
+        throw new HttpException(payload, response.status);
+      }
+    }
+
+    throw new HttpException({ message: 'Upstream service error' }, HttpStatus.BAD_GATEWAY);
   }
 }

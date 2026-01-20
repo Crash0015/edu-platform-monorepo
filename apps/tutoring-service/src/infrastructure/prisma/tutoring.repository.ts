@@ -108,6 +108,25 @@ export class PrismaTutoringRepository implements TutoringRepository {
     return booking ? this.mapToBookingRecord(booking) : null;
   }
 
+  async listSessions(): Promise<TutoringSessionRecord[]> {
+    const sessions = await this.prisma.tutoringSession.findMany({
+      where: {
+        isDeleted: false,
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
+    return sessions.map((session) => this.mapToSessionRecord(session));
+  }
+
+  async listBookings(): Promise<BookingRecord[]> {
+    const bookings = await this.prisma.booking.findMany({
+      orderBy: { reservedAt: 'desc' },
+    });
+
+    return bookings.map((booking) => this.mapToBookingRecord(booking));
+  }
+
   async cancelBooking(bookingId: string, updatedBy?: string | null): Promise<BookingRecord | null> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },

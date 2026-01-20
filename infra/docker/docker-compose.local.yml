@@ -241,7 +241,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002
       SWAGGER_ENABLED: "true"
       AUTH_SERVICE_URL: http://auth-service:3001
       ENROLLMENT_SERVICE_URL: http://enrollment-service:3007
@@ -305,7 +305,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3009
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002
       SWAGGER_ENABLED: "true"
       DATABASE_URL: postgresql://edu:edu@postgres-schedule:5432/scheduledb
       KAFKA_BROKERS: kafka:9092

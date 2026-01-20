@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateEnrollmentRequestDto {
   @ApiProperty({ example: 'uuid' })
@@ -14,8 +14,8 @@ export class CreateEnrollmentRequestDto {
 
   @ApiProperty({ example: 'uuid' })
   @IsString()
-  @IsNotEmpty()
-  correlationId!: string;
+  @IsOptional()
+  correlationId?: string;
 }
 
 export class EnrollmentResponseDto {
@@ -86,4 +86,12 @@ export class EnrollmentWithCourseDto extends EnrollmentResponseDto {
 export class EnrollmentWithStudentDto extends EnrollmentResponseDto {
   @ApiProperty({ type: StudentDetailDto, nullable: true })
   student!: StudentDetailDto | null;
+}
+
+export class EnrollmentAdminDto extends EnrollmentResponseDto {
+  @ApiProperty({ type: CourseDetailDto, required: false, nullable: true })
+  course?: CourseDetailDto | null;
+
+  @ApiProperty({ type: StudentDetailDto, required: false, nullable: true })
+  student?: StudentDetailDto | null;
 }

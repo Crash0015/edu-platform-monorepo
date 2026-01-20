@@ -50,6 +50,8 @@ export interface TutoringRepository {
   findSessionById(id: string): Promise<TutoringSessionRecord | null>;
   findBookingBySessionId(sessionId: string): Promise<BookingRecord | null>;
   findBookingById(id: string): Promise<BookingRecord | null>;
+  listSessions(): Promise<TutoringSessionRecord[]>;
+  listBookings(): Promise<BookingRecord[]>;
   cancelBooking(bookingId: string, updatedBy?: string | null): Promise<BookingRecord | null>;
   updateSessionStatus(sessionId: string, status: TutoringSessionStatus, updatedBy?: string | null): Promise<void>;
 }

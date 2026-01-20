@@ -31,4 +31,28 @@ export class HttpScheduleClient implements ScheduleClient {
 
     return response.data as ScheduleAvailability[];
   }
+
+  async updateAvailabilityStatus(
+    availabilitySlotId: string,
+    status: 'AVAILABLE' | 'BLOCKED',
+    actor: { userId: string; roles: string[] },
+  ): Promise<ScheduleAvailability> {
+    const baseUrl = this.config.scheduleServiceUrl;
+    const url = `${baseUrl}/api/v1/schedule/availability/${availabilitySlotId}/status`;
+
+    const response = await firstValueFrom(
+      this.httpService.post(
+        url,
+        { status },
+        {
+          headers: {
+            'x-user-id': actor.userId,
+            'x-user-roles': actor.roles.join(','),
+          },
+        },
+      ),
+    );
+
+    return response.data as ScheduleAvailability;
+  }
 }

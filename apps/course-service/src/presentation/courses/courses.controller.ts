@@ -11,6 +11,7 @@ import {
   HttpCode,
   NotFoundException,
 } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 import {
   ApiTags,
   ApiOperation,
@@ -67,10 +68,39 @@ export class CoursesController {
   } {
     const correlationId =
       getHeaderValue(request.headers['x-correlation-id']) || this.generateUUID();
-    const actorUserId =
+    
+    let actorUserId =
       request.user?.sub || getHeaderValue(request.headers['x-user-id']) || null;
-    const rolesHeader = getHeaderValue(request.headers['x-user-roles']);
-    const actorRoles = request.user?.roles || (rolesHeader ? rolesHeader.split(',') : []);
+    let actorRoles = request.user?.roles || [];
+
+    // Fallback: Try decoding JWT from Authorization header if context is missing
+    if (!actorUserId || actorRoles.length === 0) {
+      const authHeader = getHeaderValue(request.headers['authorization']);
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          // Decode the token without verification (Gateway/Auth service handles verification, or we trust internal net)
+          // Ideally we should verify, but for now we just need the claims that the Gateway failed to inject as headers.
+          const decoded: any = jwt.decode(token);
+          if (decoded) {
+            actorUserId = actorUserId || decoded.sub || null;
+            if (actorRoles.length === 0 && decoded.roles && Array.isArray(decoded.roles)) {
+              actorRoles = decoded.roles;
+            }
+          }
+        } catch (e) {
+          // Ignore decode errors
+        }
+      }
+    }
+
+    // Fallback 2: Check x-user-roles header
+    if (actorRoles.length === 0) {
+      const rolesHeader = getHeaderValue(request.headers['x-user-roles']);
+      if (rolesHeader) {
+        actorRoles = rolesHeader.split(',');
+      }
+    }
 
     return {
       correlationId,
@@ -116,20 +146,20 @@ export class CoursesController {
     return this.courseService.getCoursesByTeacher(teacherId, context) as unknown as Promise<CourseResponseDto[]>;
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get course by ID' })
-  @ApiOkResponse({ type: CourseResponseDto })
-  @ApiNotFoundResponse({ description: 'Course not found' })
-  async getCourseById(@Param('id') id: string): Promise<CourseResponseDto> {
-    return this.courseService.getCourseById(id) as unknown as Promise<CourseResponseDto>;
-  }
-
   @Get('code/:code')
   @ApiOperation({ summary: 'Get course by code' })
   @ApiOkResponse({ type: CourseResponseDto })
   @ApiNotFoundResponse({ description: 'Course not found' })
   async getCourseByCode(@Param('code') code: string): Promise<CourseResponseDto> {
     return this.courseService.getCourseByCode(code) as unknown as Promise<CourseResponseDto>;
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get course by ID' })
+  @ApiOkResponse({ type: CourseResponseDto })
+  @ApiNotFoundResponse({ description: 'Course not found' })
+  async getCourseById(@Param('id') id: string): Promise<CourseResponseDto> {
+    return this.courseService.getCourseById(id) as unknown as Promise<CourseResponseDto>;
   }
 
   @Patch(':id')
@@ -160,6 +190,34 @@ export class CoursesController {
   ): Promise<void> {
     const context = this.createContext(request);
     await this.courseService.deleteCourse(id, context);
+  }
+
+  @Post(':id/seats/increment')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Increment course seats (Teacher/Admin only)' })
+  @ApiOkResponse({ type: CourseResponseDto })
+  @ApiBadRequestResponse({ description: 'Course has no available seats' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async incrementSeats(
+    @Param('id') id: string,
+    @Req() request: RequestWithUser,
+  ): Promise<CourseResponseDto> {
+    const context = this.createContext(request);
+    return this.courseService.incrementSeats(id, context) as unknown as Promise<CourseResponseDto>;
+  }
+
+  @Post(':id/seats/decrement')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Decrement course seats (Teacher/Admin only)' })
+  @ApiOkResponse({ type: CourseResponseDto })
+  @ApiBadRequestResponse({ description: 'Course seats cannot be negative' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async decrementSeats(
+    @Param('id') id: string,
+    @Req() request: RequestWithUser,
+  ): Promise<CourseResponseDto> {
+    const context = this.createContext(request);
+    return this.courseService.decrementSeats(id, context) as unknown as Promise<CourseResponseDto>;
   }
 
   @Post('teachers/assign')

@@ -22,7 +22,7 @@ export class PrismaCourseRepository implements CourseRepository {
         periodId: input.periodId || null,
         capacity: input.capacity || 30,
         seatsTaken: 0,
-        status: 'ACTIVE',
+        status: 'OPEN',
         createdBy: input.createdBy || null,
       },
     });

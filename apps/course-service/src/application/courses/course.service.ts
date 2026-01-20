@@ -235,4 +235,68 @@ export class CourseService {
 
     await this.courseRepository.removeTeacherFromCourse(teacherId, courseId);
   }
+
+  async incrementSeats(courseId: string, context: RequestContext): Promise<CourseRecord> {
+    this.ensureTeacherAccess(context);
+
+    const course = await this.courseRepository.getCourseById(courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (course.seatsTaken >= course.capacity) {
+      throw new BadRequestException('Course has no available seats');
+    }
+
+    await this.courseRepository.incrementSeatsTaken(courseId);
+
+    if (course.seatsTaken + 1 >= course.capacity && course.status !== 'CLOSED') {
+      await this.courseRepository.updateCourse(courseId, {
+        status: 'CLOSED',
+        updatedBy: context.actorUserId ?? undefined,
+      });
+    }
+
+    const updated = await this.courseRepository.getCourseById(courseId);
+    if (!updated) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return updated;
+  }
+
+  async decrementSeats(courseId: string, context: RequestContext): Promise<CourseRecord> {
+    this.ensureTeacherAccess(context);
+
+    const course = await this.courseRepository.getCourseById(courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (course.seatsTaken <= 0) {
+      throw new BadRequestException('Course seats cannot be negative');
+    }
+
+    await this.courseRepository.decrementSeatsTaken(courseId);
+
+    if (course.status === 'CLOSED' && course.seatsTaken - 1 < course.capacity) {
+      await this.courseRepository.updateCourse(courseId, {
+        status: 'OPEN',
+        updatedBy: context.actorUserId ?? undefined,
+      });
+    }
+
+    const updated = await this.courseRepository.getCourseById(courseId);
+    if (!updated) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return updated;
+  }
+
+  private ensureTeacherAccess(context: RequestContext) {
+    if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+  }
 }

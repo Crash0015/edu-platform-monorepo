@@ -24,6 +24,14 @@ export interface AvailabilityRepository {
     status: AvailabilityStatus;
     createdBy?: string | null;
   }): Promise<AvailabilityRecord>;
+  updateStatus(id: string, status: AvailabilityStatus, updatedBy?: string | null): Promise<AvailabilityRecord | null>;
+  listAll(
+    filters?: {
+      startTimeFrom?: Date;
+      startTimeTo?: Date;
+      status?: AvailabilityStatus;
+    },
+  ): Promise<AvailabilityRecord[]>;
   listByTeacher(
     teacherId: string,
     filters?: {

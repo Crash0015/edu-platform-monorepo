@@ -5,18 +5,17 @@ import { MaterialConfig } from '../../shared/config/material-config';
 import { MaterialRecord, MaterialsClient } from '../../application/materials/ports/materials.client';
 import { MaterialStatus, MaterialType } from '../../domain/materials/material-types';
 
+type StrapiEntity<T> = {
+  id: number | string;
+  attributes?: T;
+} & T;
+
 type StrapiResponse<T> = {
-  data: {
-    id: number | string;
-    attributes: T;
-  } | null;
+  data: StrapiEntity<T> | null;
 };
 
 type StrapiListResponse<T> = {
-  data: Array<{
-    id: number | string;
-    attributes: T;
-  }>;
+  data: Array<StrapiEntity<T>>;
 };
 
 type StrapiMaterialAttributes = {
@@ -83,18 +82,19 @@ export class StrapiClient implements MaterialsClient {
     await this.delete(`/materials/${id}`);
   }
 
-  private mapRecord(item: { id: number | string; attributes: StrapiMaterialAttributes }): MaterialRecord {
+  private mapRecord(item: StrapiEntity<StrapiMaterialAttributes>): MaterialRecord {
+    const attributes = item.attributes ?? item;
     return {
       id: String(item.id),
-      title: item.attributes.title,
-      description: item.attributes.description ?? null,
-      courseId: item.attributes.courseId,
-      type: item.attributes.type,
-      status: item.attributes.status,
-      resourceUrl: item.attributes.resourceUrl,
-      thumbnailUrl: item.attributes.thumbnailUrl ?? null,
-      durationMinutes: item.attributes.durationMinutes ?? null,
-      publishedAt: item.attributes.publishedAt ?? null,
+      title: attributes.title,
+      description: attributes.description ?? null,
+      courseId: attributes.courseId,
+      type: attributes.type,
+      status: attributes.status,
+      resourceUrl: attributes.resourceUrl,
+      thumbnailUrl: attributes.thumbnailUrl ?? null,
+      durationMinutes: attributes.durationMinutes ?? null,
+      publishedAt: attributes.publishedAt ?? null,
     };
   }
 

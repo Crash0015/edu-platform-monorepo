@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -11,6 +12,7 @@ import {
 import { EnrollmentService } from '../../application/enrollments/enrollment.service';
 import {
   CreateEnrollmentRequestDto,
+  EnrollmentAdminDto,
   EnrollmentResponseDto,
   EnrollmentWithCourseDto,
   EnrollmentWithStudentDto,
@@ -37,9 +39,33 @@ export class EnrollmentController {
     actorUserId: string | null;
     actorRoles: string[];
   } {
-    const actorUserId = request.user?.sub ?? getHeaderValue(request.headers['x-user-id']) ?? null;
-    const rolesHeader = getHeaderValue(request.headers['x-user-roles']);
-    const actorRoles = request.user?.roles ?? (rolesHeader ? rolesHeader.split(',') : []);
+    let actorUserId = request.user?.sub ?? getHeaderValue(request.headers['x-user-id']) ?? null;
+    let actorRoles = request.user?.roles ?? [];
+
+    if (!actorUserId || actorRoles.length === 0) {
+      const authHeader = getHeaderValue(request.headers['authorization']);
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+          const decoded: any = jwt.decode(token);
+          if (decoded) {
+            actorUserId = actorUserId || decoded.sub || null;
+            if (actorRoles.length === 0 && decoded.roles && Array.isArray(decoded.roles)) {
+              actorRoles = decoded.roles;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    if (actorRoles.length === 0) {
+      const rolesHeader = getHeaderValue(request.headers['x-user-roles']);
+      if (rolesHeader) {
+        actorRoles = rolesHeader.split(',');
+      }
+    }
 
     return {
       actorUserId,
@@ -50,10 +76,10 @@ export class EnrollmentController {
   @Post('assign')
   @HttpCode(201)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Assign student to course (teacher only)' })
+  @ApiOperation({ summary: 'Assign student to course (teacher/admin)' })
   @ApiOkResponse({ type: EnrollmentResponseDto })
   @ApiBadRequestResponse({ description: 'Validation failed' })
-  @ApiUnauthorizedResponse({ description: 'Teacher role required' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
   async assign(
     @Body() body: CreateEnrollmentRequestDto,
     @Req() request: RequestWithUser,
@@ -94,6 +120,16 @@ export class EnrollmentController {
   ): Promise<EnrollmentWithStudentDto[]> {
     const context = this.createContext(request);
     return this.enrollmentService.getEnrollmentsByCourse(courseId, context);
+  }
+
+  @Get()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all enrollments (Admin only)' })
+  @ApiOkResponse({ type: [EnrollmentAdminDto] })
+  @ApiUnauthorizedResponse({ description: 'Admin role required' })
+  async getAllEnrollments(@Req() request: RequestWithUser): Promise<EnrollmentAdminDto[]> {
+    const context = this.createContext(request);
+    return this.enrollmentService.getAllEnrollments(context);
   }
 
   private generateUUID(): string {

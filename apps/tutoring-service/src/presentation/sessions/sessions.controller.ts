@@ -163,4 +163,46 @@ export class SessionsController {
         : null,
     };
   }
+
+  @Get('sessions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all tutoring sessions (Admin only)' })
+  @ApiOkResponse({ type: [SessionResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Admin role required' })
+  async listSessions(@Req() request: RequestWithUser): Promise<SessionResponseDto[]> {
+    const context = this.createContext(request);
+    const sessions = await this.tutoringService.listSessions(context);
+
+    return sessions.map((session) => ({
+      id: session.id,
+      teacherId: session.teacherId,
+      courseId: session.courseId,
+      availabilitySlotId: session.availabilitySlotId,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      mode: session.mode as TutoringModeDto,
+      location: session.location ?? null,
+      meetingUrl: session.meetingUrl ?? null,
+      status: session.status as SessionStatusDto,
+      booking: null,
+    }));
+  }
+
+  @Get('bookings')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all tutoring bookings (Admin only)' })
+  @ApiOkResponse({ type: [BookingResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Admin role required' })
+  async listBookings(@Req() request: RequestWithUser): Promise<BookingResponseDto[]> {
+    const context = this.createContext(request);
+    const bookings = await this.tutoringService.listBookings(context);
+
+    return bookings.map((booking) => ({
+      id: booking.id,
+      tutoringSessionId: booking.tutoringSessionId,
+      studentId: booking.studentId,
+      status: booking.status as BookingStatusDto,
+      reservedAt: booking.reservedAt,
+    }));
+  }
 }

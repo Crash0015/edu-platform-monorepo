@@ -17,6 +17,26 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
     return this.mapToEnrollmentRecord(enrollment);
   }
 
+  async getEnrollmentByStudentCourse(studentId: string, courseId: string): Promise<EnrollmentRecord | null> {
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId,
+        courseId,
+        status: 'ACTIVE',
+      },
+    });
+
+    return enrollment ? this.mapToEnrollmentRecord(enrollment) : null;
+  }
+
+  async getAllEnrollments(): Promise<EnrollmentRecord[]> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return enrollments.map((enrollment) => this.mapToEnrollmentRecord(enrollment));
+  }
+
   async getEnrollmentsByStudent(studentId: string): Promise<EnrollmentRecord[]> {
     const enrollments = await this.prisma.enrollment.findMany({
       where: {

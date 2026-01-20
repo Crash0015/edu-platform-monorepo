@@ -14,4 +14,9 @@ export interface ScheduleClient {
     startTimeTo?: string;
     status?: 'AVAILABLE' | 'BLOCKED';
   }): Promise<ScheduleAvailability[]>;
+  updateAvailabilityStatus(
+    availabilitySlotId: string,
+    status: 'AVAILABLE' | 'BLOCKED',
+    actor: { userId: string; roles: string[] },
+  ): Promise<ScheduleAvailability>;
 }

@@ -47,7 +47,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     if (!this.producer) {
       return;
     }
-    await this.producer.send({
+    const sendPromise = this.producer.send({
       topic,
       messages: [
         {
@@ -55,6 +55,11 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
         },
       ],
     });
+
+    await Promise.race([
+      sendPromise,
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]).catch(() => undefined);
   }
 
   async healthCheck(): Promise<boolean> {

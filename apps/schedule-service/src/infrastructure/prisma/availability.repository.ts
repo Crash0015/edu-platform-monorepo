@@ -31,6 +31,22 @@ export class PrismaAvailabilityRepository implements AvailabilityRepository {
     return this.mapToRecord(slot);
   }
 
+  async updateStatus(
+    id: string,
+    status: AvailabilityStatus,
+    updatedBy?: string | null,
+  ): Promise<AvailabilityRecord | null> {
+    const slot = await this.prisma.availabilitySlot.update({
+      where: { id },
+      data: {
+        status,
+        updatedBy: updatedBy ?? null,
+      },
+    });
+
+    return slot ? this.mapToRecord(slot) : null;
+  }
+
   async listByTeacher(
     teacherId: string,
     filters?: {
@@ -41,6 +57,35 @@ export class PrismaAvailabilityRepository implements AvailabilityRepository {
   ): Promise<AvailabilityRecord[]> {
     const where: any = {
       teacherId,
+      isDeleted: false,
+    };
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+    if (filters?.startTimeFrom || filters?.startTimeTo) {
+      where.startTime = {
+        ...(filters?.startTimeFrom ? { gte: filters.startTimeFrom } : null),
+        ...(filters?.startTimeTo ? { lte: filters.startTimeTo } : null),
+      };
+    }
+
+    const slots = await this.prisma.availabilitySlot.findMany({
+      where,
+      orderBy: { startTime: 'asc' },
+    });
+
+    return slots.map((slot) => this.mapToRecord(slot));
+  }
+
+  async listAll(
+    filters?: {
+      startTimeFrom?: Date;
+      startTimeTo?: Date;
+      status?: AvailabilityStatus;
+    },
+  ): Promise<AvailabilityRecord[]> {
+    const where: any = {
       isDeleted: false,
     };
 

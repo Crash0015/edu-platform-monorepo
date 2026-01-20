@@ -10,6 +10,8 @@ export type EnrollmentRecord = {
 
 export interface EnrollmentRepository {
   createEnrollment(input: { studentId: string; courseId: string }): Promise<EnrollmentRecord>;
+  getEnrollmentByStudentCourse(studentId: string, courseId: string): Promise<EnrollmentRecord | null>;
+  getAllEnrollments(): Promise<EnrollmentRecord[]>;
   getEnrollmentsByStudent(studentId: string): Promise<EnrollmentRecord[]>;
   getEnrollmentsByCourse(courseId: string): Promise<EnrollmentRecord[]>;
   getEnrollmentById(enrollmentId: string): Promise<EnrollmentRecord | null>;

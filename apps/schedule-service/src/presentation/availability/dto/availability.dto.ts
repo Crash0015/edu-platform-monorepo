@@ -53,6 +53,12 @@ export class AvailabilityQueryDto {
   status?: AvailabilityStatusDto;
 }
 
+export class UpdateAvailabilityStatusRequestDto {
+  @ApiProperty({ enum: AvailabilityStatusDto })
+  @IsEnum(AvailabilityStatusDto)
+  status!: AvailabilityStatusDto;
+}
+
 export class AvailabilityResponseDto {
   @ApiProperty({ example: 'uuid' })
   id!: string;

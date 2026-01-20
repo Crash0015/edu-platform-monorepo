@@ -32,6 +32,8 @@ import { JwtStrategy } from '../../infrastructure/security/jwt.strategy';
 import { LocalStrategy } from '../../infrastructure/security/local.strategy';
 
 import { AuthController } from './auth.controller';
+import { AdminController } from '../admin/admin.controller';
+import { AdminService } from '../../application/admin/admin.service';
 
 import { RateLimitGuard } from '../../shared/guards/rate-limit.guard';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
@@ -60,10 +62,11 @@ import { RolesGuard } from '../../shared/guards/roles.guard';
     }),
 
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AdminController],
 
   providers: [
     AuthService,
+    AdminService,
     JwtStrategy,
     LocalStrategy,
     EncryptionService,

@@ -10,6 +10,8 @@ describe('EnrollmentService', () => {
         courseId: '22222222-2222-2222-2222-222222222222',
         status: 'ACTIVE',
       }),
+      getEnrollmentByStudentCourse: jest.fn().mockResolvedValue(null),
+      getAllEnrollments: jest.fn().mockResolvedValue([]),
     };
     const kafkaService = {
       emit: jest.fn(),
@@ -34,6 +36,14 @@ describe('EnrollmentService', () => {
           id: '22222222-2222-2222-2222-222222222222',
           capacity: 30,
           seatsTaken: 10,
+          status: 'OPEN',
+        }),
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: '22222222-2222-2222-2222-222222222222',
+          seatsTaken: 11,
           status: 'OPEN',
         }),
       } as any);

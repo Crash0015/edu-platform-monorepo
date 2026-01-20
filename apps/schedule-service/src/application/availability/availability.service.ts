@@ -123,6 +123,35 @@ export class AvailabilityService {
     });
   }
 
+  async listAvailability(
+    filters: {
+      startTimeFrom?: string;
+      startTimeTo?: string;
+      status?: 'AVAILABLE' | 'BLOCKED';
+    },
+    context: RequestContext,
+  ): Promise<AvailabilityRecord[]> {
+    if (!context.actorUserId || !context.actorRoles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
+
+    const startTimeFrom = filters.startTimeFrom ? new Date(filters.startTimeFrom) : undefined;
+    const startTimeTo = filters.startTimeTo ? new Date(filters.startTimeTo) : undefined;
+
+    if (startTimeFrom && Number.isNaN(startTimeFrom.getTime())) {
+      throw new BadRequestException('Invalid startTimeFrom');
+    }
+    if (startTimeTo && Number.isNaN(startTimeTo.getTime())) {
+      throw new BadRequestException('Invalid startTimeTo');
+    }
+
+    return this.availabilityRepository.listAll({
+      startTimeFrom,
+      startTimeTo,
+      status: filters.status,
+    });
+  }
+
   async deleteAvailability(id: string, context: RequestContext): Promise<void> {
     if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
       throw new UnauthorizedException('Teacher or Admin role required');
@@ -138,5 +167,31 @@ export class AvailabilityService {
     }
 
     await this.availabilityRepository.deleteAvailability(id, context.actorUserId);
+  }
+
+  async updateAvailabilityStatus(
+    id: string,
+    status: 'AVAILABLE' | 'BLOCKED',
+    context: RequestContext,
+  ): Promise<AvailabilityRecord> {
+    if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+
+    const slot = await this.availabilityRepository.findById(id);
+    if (!slot) {
+      throw new NotFoundException('Availability slot not found');
+    }
+
+    if (context.actorRoles.includes('TEACHER') && slot.teacherId !== context.actorUserId) {
+      throw new UnauthorizedException('Teachers can only manage their own availability');
+    }
+
+    const updated = await this.availabilityRepository.updateStatus(id, status, context.actorUserId);
+    if (!updated) {
+      throw new NotFoundException('Availability slot not found');
+    }
+
+    return updated;
   }
 }

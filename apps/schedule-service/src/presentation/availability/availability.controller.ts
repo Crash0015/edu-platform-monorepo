@@ -14,6 +14,7 @@ import {
   AvailabilityQueryDto,
   AvailabilityResponseDto,
   CreateAvailabilityRequestDto,
+  UpdateAvailabilityStatusRequestDto,
 } from './dto/availability.dto';
 
 type RequestWithUser = {
@@ -93,6 +94,19 @@ export class AvailabilityController {
     return this.availabilityService.listAvailabilityByTeacher(teacherId, query) as unknown as Promise<AvailabilityResponseDto[]>;
   }
 
+  @Get('availability')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all availability slots (Admin only)' })
+  @ApiOkResponse({ type: [AvailabilityResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Admin role required' })
+  async listAvailability(
+    @Query() query: AvailabilityQueryDto,
+    @Req() request: RequestWithUser,
+  ): Promise<AvailabilityResponseDto[]> {
+    const context = this.createContext(request);
+    return this.availabilityService.listAvailability(query, context) as unknown as Promise<AvailabilityResponseDto[]>;
+  }
+
   @Delete('availability/:id')
   @HttpCode(204)
   @ApiBearerAuth()
@@ -105,5 +119,20 @@ export class AvailabilityController {
   ): Promise<void> {
     const context = this.createContext(request);
     await this.availabilityService.deleteAvailability(id, context);
+  }
+
+  @Post('availability/:id/status')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update availability slot status (Teacher/Admin only)' })
+  @ApiOkResponse({ type: AvailabilityResponseDto })
+  @ApiNotFoundResponse({ description: 'Availability slot not found' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async updateAvailabilityStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateAvailabilityStatusRequestDto,
+    @Req() request: RequestWithUser,
+  ): Promise<AvailabilityResponseDto> {
+    const context = this.createContext(request);
+    return this.availabilityService.updateAvailabilityStatus(id, body.status, context) as unknown as Promise<AvailabilityResponseDto>;
   }
 }

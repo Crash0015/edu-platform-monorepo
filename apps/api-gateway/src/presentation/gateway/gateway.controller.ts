@@ -169,6 +169,18 @@ export class GatewayController {
     return this.gatewayService.deleteCourse(id, headers);
   }
 
+  @Post('courses/:id/seats/increment')
+  @ApiOperation({ summary: 'Proxy course seat increment' })
+  async incrementCourseSeats(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.incrementCourseSeats(id, headers);
+  }
+
+  @Post('courses/:id/seats/decrement')
+  @ApiOperation({ summary: 'Proxy course seat decrement' })
+  async decrementCourseSeats(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.decrementCourseSeats(id, headers);
+  }
+
   @Post('courses/teachers/assign')
   @ApiOperation({ summary: 'Proxy assign teacher to course' })
   async assignTeacher(@Body() body: Record<string, unknown>, @Headers() headers: Record<string, string>) {
@@ -249,6 +261,16 @@ export class GatewayController {
     return this.gatewayService.deleteScheduleAvailability(id, headers);
   }
 
+  @Post('schedule/availability/:id/status')
+  @ApiOperation({ summary: 'Proxy schedule availability status update' })
+  async updateScheduleAvailabilityStatus(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateScheduleAvailabilityStatus(id, body, headers);
+  }
+
   @Get('tutoring/sessions/available')
   @ApiOperation({ summary: 'Proxy available tutoring sessions' })
   async listAvailableSessions(
@@ -326,5 +348,184 @@ export class GatewayController {
   @ApiOperation({ summary: 'Proxy material publish' })
   async publishMaterial(@Param('id') id: string, @Headers() headers: Record<string, string>) {
     return this.gatewayService.publishMaterial(id, headers);
+  }
+
+  @Get('admin/users')
+  @ApiOperation({ summary: 'Admin users list' })
+  async listAdminUsers(@Query() query: Record<string, string>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.listAdminUsers(query, headers);
+  }
+
+   @Post('admin/users')
+   @ApiOperation({ summary: 'Admin create user' })
+   async createAdminUser(@Body() body: Record<string, unknown>, @Headers() headers: Record<string, string>) {
+     return this.gatewayService.createAdminUser(body, headers);
+   }
+
+  @Get('admin/users/:id')
+  @ApiOperation({ summary: 'Admin user detail' })
+  async getAdminUser(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.getAdminUser(id, headers);
+  }
+
+  @Patch('admin/users/:id/status')
+  @ApiOperation({ summary: 'Admin update user status' })
+  async updateAdminUserStatus(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateAdminUserStatus(id, body, headers);
+  }
+
+  @Patch('admin/users/:id/type')
+  @ApiOperation({ summary: 'Admin update user type' })
+  async updateAdminUserType(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateAdminUserType(id, body, headers);
+  }
+
+  @Post('admin/users/:id/mfa/reset')
+  @ApiOperation({ summary: 'Admin reset user MFA' })
+  async resetAdminUserMfa(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.resetAdminUserMfa(id, headers);
+  }
+
+  @Get('admin/reports/users')
+  @ApiOperation({ summary: 'Admin users report' })
+  async getAdminUsersReport(@Headers() headers: Record<string, string>) {
+    return this.gatewayService.getAdminUsersReport(headers);
+  }
+
+  @Get('admin/enrollments')
+  @ApiOperation({ summary: 'Admin enrollments list' })
+  async listAdminEnrollments(@Headers() headers: Record<string, string>) {
+    return this.gatewayService.listAdminEnrollments(headers);
+  }
+
+  @Get('admin/courses')
+  @ApiOperation({ summary: 'Admin courses list' })
+  async listAdminCourses(@Query() query: Record<string, string>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.listCourses(query, headers);
+  }
+
+  @Post('admin/courses')
+  @ApiOperation({ summary: 'Admin course creation' })
+  async createAdminCourse(@Body() body: Record<string, unknown>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.createCourse(body, headers);
+  }
+
+  @Get('admin/courses/:id')
+  @ApiOperation({ summary: 'Admin course detail' })
+  async getAdminCourse(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.getCourse(id, headers);
+  }
+
+  @Patch('admin/courses/:id')
+  @ApiOperation({ summary: 'Admin course update' })
+  async updateAdminCourse(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateCourse(id, body, headers);
+  }
+
+  @Delete('admin/courses/:id')
+  @ApiOperation({ summary: 'Admin course delete' })
+  async deleteAdminCourse(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.deleteCourse(id, headers);
+  }
+
+  @Get('admin/materials')
+  @ApiOperation({ summary: 'Admin materials list' })
+  async listAdminMaterials(@Query() query: Record<string, string>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.listMaterials(query, headers);
+  }
+
+  @Post('admin/materials')
+  @ApiOperation({ summary: 'Admin material creation' })
+  async createAdminMaterial(@Body() body: Record<string, unknown>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.createMaterial(body, headers);
+  }
+
+  @Patch('admin/materials/:id')
+  @ApiOperation({ summary: 'Admin material update' })
+  async updateAdminMaterial(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateMaterial(id, body, headers);
+  }
+
+  @Delete('admin/materials/:id')
+  @ApiOperation({ summary: 'Admin material delete' })
+  async deleteAdminMaterial(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.deleteMaterial(id, headers);
+  }
+
+  @Post('admin/materials/:id/publish')
+  @ApiOperation({ summary: 'Admin material publish' })
+  async publishAdminMaterial(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.publishMaterial(id, headers);
+  }
+
+  @Post('admin/enrollments/assign')
+  @ApiOperation({ summary: 'Admin assign enrollment' })
+  async assignAdminEnrollment(@Body() body: Record<string, unknown>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.assignEnrollment(body, headers);
+  }
+
+  @Get('admin/schedule/availability')
+  @ApiOperation({ summary: 'Admin availability list' })
+  async listAdminAvailability(@Query() query: Record<string, string>, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.listAdminAvailability(query, headers);
+  }
+
+  @Post('admin/schedule/availability')
+  @ApiOperation({ summary: 'Admin availability create' })
+  async createAdminAvailability(
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.createScheduleAvailability(body, headers);
+  }
+
+  @Post('admin/schedule/availability/:id/status')
+  @ApiOperation({ summary: 'Admin availability status update' })
+  async updateAdminAvailabilityStatus(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateScheduleAvailabilityStatus(id, body, headers);
+  }
+
+  @Delete('admin/schedule/availability/:id')
+  @ApiOperation({ summary: 'Admin availability delete' })
+  async deleteAdminAvailability(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.deleteScheduleAvailability(id, headers);
+  }
+
+  @Get('admin/tutoring/sessions')
+  @ApiOperation({ summary: 'Admin tutoring sessions list' })
+  async listAdminTutoringSessions(@Headers() headers: Record<string, string>) {
+    return this.gatewayService.listAdminTutoringSessions(headers);
+  }
+
+  @Get('admin/tutoring/bookings')
+  @ApiOperation({ summary: 'Admin tutoring bookings list' })
+  async listAdminTutoringBookings(@Headers() headers: Record<string, string>) {
+    return this.gatewayService.listAdminTutoringBookings(headers);
+  }
+
+  @Get('admin/reports/summary')
+  @ApiOperation({ summary: 'Admin platform summary report' })
+  async getAdminSummary(@Headers() headers: Record<string, string>) {
+    return this.gatewayService.getAdminSummary(headers);
   }
 }

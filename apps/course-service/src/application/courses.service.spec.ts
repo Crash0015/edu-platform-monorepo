@@ -62,4 +62,43 @@ describe('CourseService', () => {
       ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('increments seats and closes course when full', async () => {
+    const before = {
+      id: 'course-1',
+      code: 'MAT-101',
+      name: 'Matematica',
+      description: null,
+      periodId: null,
+      status: 'OPEN' as CourseStatus,
+      capacity: 1,
+      seatsTaken: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'teacher-1',
+      updatedBy: null,
+    };
+    const after = {
+      ...before,
+      seatsTaken: 1,
+      status: 'CLOSED' as CourseStatus,
+    };
+
+    (repository.getCourseById as jest.Mock)
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(after);
+
+    const result = await service.incrementSeats('course-1', {
+      correlationId: 'corr-1',
+      actorUserId: 'teacher-1',
+      actorRoles: ['TEACHER'],
+    });
+
+    expect(repository.incrementSeatsTaken).toHaveBeenCalledWith('course-1');
+    expect(repository.updateCourse).toHaveBeenCalledWith('course-1', {
+      status: 'CLOSED',
+      updatedBy: 'teacher-1',
+    });
+    expect(result.status).toBe('CLOSED');
+  });
 });

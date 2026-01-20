@@ -94,6 +94,11 @@ export class TutoringService {
       throw new BadRequestException('Invalid availability slot times');
     }
 
+    await this.scheduleClient.updateAvailabilityStatus(slot.id, 'BLOCKED', {
+      userId: slot.teacherId,
+      roles: ['TEACHER'],
+    });
+
     const session = TutoringSession.create({
       teacherId: input.teacherId,
       courseId: input.courseId,
@@ -105,20 +110,33 @@ export class TutoringService {
       meetingUrl: input.meetingUrl,
     });
 
-    const result = await this.tutoringRepository.reserveSession({
-      teacherId: session.teacherId,
-      courseId: session.courseId,
-      availabilitySlotId: session.availabilitySlotId,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      mode: session.mode,
-      location: session.location ?? null,
-      meetingUrl: session.meetingUrl ?? null,
-      studentId: input.studentId,
-      createdBy: context.actorUserId,
-    });
+    let result;
+    try {
+      result = await this.tutoringRepository.reserveSession({
+        teacherId: session.teacherId,
+        courseId: session.courseId,
+        availabilitySlotId: session.availabilitySlotId,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        mode: session.mode,
+        location: session.location ?? null,
+        meetingUrl: session.meetingUrl ?? null,
+        studentId: input.studentId,
+        createdBy: context.actorUserId,
+      });
+    } catch (error) {
+      await this.scheduleClient.updateAvailabilityStatus(slot.id, 'AVAILABLE', {
+        userId: slot.teacherId,
+        roles: ['TEACHER'],
+      });
+      throw error;
+    }
 
     if (result.booking.studentId !== input.studentId) {
+      await this.scheduleClient.updateAvailabilityStatus(slot.id, 'AVAILABLE', {
+        userId: slot.teacherId,
+        roles: ['TEACHER'],
+      });
       throw new BadRequestException('Availability slot already reserved');
     }
 
@@ -154,12 +172,21 @@ export class TutoringService {
       throw new UnauthorizedException('Students can only cancel their own bookings');
     }
 
+    const session = await this.tutoringRepository.findSessionById(existingBooking.tutoringSessionId);
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
     const booking = await this.tutoringRepository.cancelBooking(input.bookingId, context.actorUserId);
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
 
     await this.tutoringRepository.updateSessionStatus(booking.tutoringSessionId, 'OPEN', context.actorUserId);
+    await this.scheduleClient.updateAvailabilityStatus(session.availabilitySlotId, 'AVAILABLE', {
+      userId: session.teacherId,
+      roles: ['TEACHER'],
+    });
 
     return booking;
   }
@@ -173,5 +200,21 @@ export class TutoringService {
     const booking = await this.tutoringRepository.findBookingBySessionId(session.id);
 
     return { session, booking };
+  }
+
+  async listSessions(context: RequestContext): Promise<TutoringSessionRecord[]> {
+    if (!context.actorUserId || !context.actorRoles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
+
+    return this.tutoringRepository.listSessions();
+  }
+
+  async listBookings(context: RequestContext): Promise<BookingRecord[]> {
+    if (!context.actorUserId || !context.actorRoles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
+
+    return this.tutoringRepository.listBookings();
   }
 }

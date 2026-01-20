@@ -21,7 +21,7 @@ type CourseSummary = {
   description: string | null;
   capacity: number; 
   seatsTaken: number; 
-  status: 'OPEN' | 'CLOSED' 
+  status: 'OPEN' | 'CLOSED' | 'ACTIVE' | 'INACTIVE' 
 };
 
 @Injectable()
@@ -41,8 +41,8 @@ export class EnrollmentService {
     actorRoles: string[];
   }) {
     const teacherId = input.actorUserId;
-    if (!teacherId || !input.actorRoles.includes('TEACHER')) {
-      throw new UnauthorizedException('Teacher context is required');
+    if (!teacherId || (!input.actorRoles.includes('TEACHER') && !input.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin context is required');
     }
 
     const student = await this.fetchUser(input.studentId);
@@ -51,17 +51,33 @@ export class EnrollmentService {
     }
 
     const course = await this.fetchCourse(input.courseId);
-    if (!course || course.status !== 'OPEN') {
+    if (!course || !['OPEN', 'ACTIVE'].includes(course.status)) {
       throw new BadRequestException('Course is not open');
     }
     if (course.seatsTaken >= course.capacity) {
       throw new BadRequestException('Course has no available seats');
     }
 
-    const enrollment = await this.enrollmentRepository.createEnrollment({
-      studentId: input.studentId,
-      courseId: input.courseId,
-    });
+    const existingEnrollment = await this.enrollmentRepository.getEnrollmentByStudentCourse(
+      input.studentId,
+      input.courseId,
+    );
+    if (existingEnrollment) {
+      throw new BadRequestException('Student already enrolled');
+    }
+
+    await this.reserveCourseSeat(input.courseId, input.actorUserId, input.actorRoles);
+
+    let enrollment;
+    try {
+      enrollment = await this.enrollmentRepository.createEnrollment({
+        studentId: input.studentId,
+        courseId: input.courseId,
+      });
+    } catch (error) {
+      await this.releaseCourseSeat(input.courseId, input.actorUserId, input.actorRoles);
+      throw error;
+    }
 
     const event = buildEventEnvelope({
       eventType: EVENT_TYPES.ENROLLMENT_CREATED,
@@ -78,6 +94,58 @@ export class EnrollmentService {
     await this.kafkaService.emit(event.event_type, event);
 
     return enrollment;
+  }
+
+  async getAllEnrollments(context: { actorUserId: string | null; actorRoles: string[] }) {
+    if (!context.actorUserId || !context.actorRoles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
+
+    const enrollments = await this.enrollmentRepository.getAllEnrollments();
+    const enriched = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const [student, course] = await Promise.all([
+          this.fetchUser(enrollment.studentId),
+          this.fetchCourse(enrollment.courseId),
+        ]);
+        return {
+          ...enrollment,
+          student,
+          course,
+        };
+      }),
+    );
+
+    return enriched;
+  }
+
+  private async reserveCourseSeat(courseId: string, actorUserId: string | null, actorRoles: string[]) {
+    await this.updateCourseSeats(courseId, 'increment', actorUserId, actorRoles);
+  }
+
+  private async releaseCourseSeat(courseId: string, actorUserId: string | null, actorRoles: string[]) {
+    await this.updateCourseSeats(courseId, 'decrement', actorUserId, actorRoles);
+  }
+
+  private async updateCourseSeats(
+    courseId: string,
+    action: 'increment' | 'decrement',
+    actorUserId: string | null,
+    actorRoles: string[],
+  ) {
+    const baseUrl = this.configService.get<string>('COURSE_SERVICE_URL', 'http://course-service:3004');
+    const response = await fetch(`${baseUrl}/api/v1/courses/${courseId}/seats/${action}`, {
+      method: 'POST',
+      headers: {
+        'x-user-id': actorUserId ?? '',
+        'x-user-roles': actorRoles.join(',') || 'TEACHER',
+      },
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new BadRequestException(payload?.message || 'Course seat update failed');
+    }
   }
 
   private async fetchUser(userId: string): Promise<UserSummary | null> {
