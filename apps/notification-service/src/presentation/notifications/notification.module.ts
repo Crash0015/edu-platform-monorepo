@@ -10,7 +10,7 @@ import { KafkaModule } from '../../infrastructure/kafka/kafka.module';
 @Module({
   imports: [ConfigModule, RabbitMqModule, forwardRef(() => KafkaModule)],
   controllers: [NotificationController],
-  providers: [NotificationService, NotificationConsumer],
+  providers: [NotificationService, NotificationConsumer, EnrollmentKafkaConsumer],
   exports: [NotificationService],
 })
 export class NotificationModule {}
