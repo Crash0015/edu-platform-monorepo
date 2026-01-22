@@ -190,16 +190,36 @@ jobs:
       - name: Run enrollment migration
         run: docker exec edu-enrollment-service npm run prisma:migrate
 
-      - name: Clear enrollments
-        run: docker exec edu-postgres-enrollment psql -U edu -d enrollmentdb -c "TRUNCATE enrollments;"
-
-      - name: Trigger enrollment via gateway
+      - name: Seed course
         run: |
-          curl -s -X POST http://localhost:3000/api/v1/gateway/enrollments/assign \
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3004/api/v1/courses \
             -H "Content-Type: application/json" \
             -H "x-user-id: 33333333-3333-3333-3333-333333333333" \
             -H "x-user-roles: TEACHER" \
-            -d '{"studentId":"11111111-1111-1111-1111-111111111111","courseId":"22222222-2222-2222-2222-222222222222","correlationId":"ci-flow-001"}'
+            -d '{"code":"CI-101","name":"Curso CI","description":"Curso de integracion","capacity":5}')
+          if [ "$STATUS" != "201" ] && [ "$STATUS" != "400" ]; then
+            echo "Unexpected course create status: $STATUS" && exit 1
+          fi
+
+      - name: Clear enrollments
+        run: docker exec edu-postgres-enrollment psql -U edu -d enrollmentdb -c "TRUNCATE enrollments;"
+
+      - name: Resolve course ID
+        id: course
+        run: |
+          COURSE_ID=$(curl -s http://localhost:3004/api/v1/courses/code/CI-101 | node -e "const fs=require('fs'); const raw=fs.readFileSync(0,'utf8').trim(); if (!raw) process.exit(1); const data=JSON.parse(raw); if (!data.id) process.exit(1); process.stdout.write(data.id);")
+          echo "course_id=$COURSE_ID" >> $GITHUB_OUTPUT
+
+      - name: Trigger enrollment via gateway
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/api/v1/gateway/enrollments/assign-with-profile \
+            -H "Content-Type: application/json" \
+            -H "x-user-id: 33333333-3333-3333-3333-333333333333" \
+            -H "x-user-roles: TEACHER" \
+            -d '{"email":"student@example.com","fullName":"CI Student","courseId":"${{ steps.course.outputs.course_id }}","correlationId":"ci-flow-001"}')
+          if [ "$STATUS" != "201" ] && [ "$STATUS" != "400" ]; then
+            echo "Unexpected enroll status: $STATUS" && exit 1
+          fi
 
       - name: Verify email in MailHog
         run: |
