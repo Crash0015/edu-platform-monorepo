@@ -47,6 +47,32 @@ export class PrismaAvailabilityRepository implements AvailabilityRepository {
     return slot ? this.mapToRecord(slot) : null;
   }
 
+  async updateAvailability(
+    id: string,
+    input: {
+      courseId?: string | null;
+      startTime: Date;
+      endTime: Date;
+      timezone: string;
+      status: AvailabilityStatus;
+      updatedBy?: string | null;
+    },
+  ): Promise<AvailabilityRecord | null> {
+    const slot = await this.prisma.availabilitySlot.update({
+      where: { id },
+      data: {
+        courseId: input.courseId ?? null,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        timezone: input.timezone,
+        status: input.status,
+        updatedBy: input.updatedBy ?? null,
+      },
+    });
+
+    return slot ? this.mapToRecord(slot) : null;
+  }
+
   async listByTeacher(
     teacherId: string,
     filters?: {

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import DashboardShell from '../../../../components/DashboardShell';
-import { apiFetchAuth } from '../../../../lib/api';
+import { apiFetchAuth, apiFetchAuthForm } from '../../../../lib/api';
 import { adminNav } from '../../../../lib/nav';
 
 type Material = {
@@ -40,6 +40,7 @@ export default function AdminMaterialsPage() {
     durationMinutes: '',
   });
   const [courses, setCourses] = useState<Course[]>([]);
+  const [file, setFile] = useState<File | null>(null);
 
   const loadMaterials = async () => {
     setLoading(true);
@@ -81,12 +82,20 @@ export default function AdminMaterialsPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    let resourceUrl = formData.resourceUrl;
+    if (formData.type === 'PDF' && file) {
+      const data = new FormData();
+      data.append('file', file);
+      const uploadResponse = await apiFetchAuthForm<{ url: string }>('/gateway/materials/uploads', data);
+      resourceUrl = uploadResponse.url;
+    }
+
     const payload = {
       title: formData.title,
       description: formData.description || undefined,
       courseId: formData.courseId,
       type: formData.type,
-      resourceUrl: formData.resourceUrl,
+      resourceUrl,
       thumbnailUrl: formData.thumbnailUrl || undefined,
       durationMinutes: formData.durationMinutes ? Number(formData.durationMinutes) : undefined,
     };
@@ -105,6 +114,7 @@ export default function AdminMaterialsPage() {
       setShowForm(false);
       setEditing(null);
       setFormData({ title: '', description: '', courseId: '', type: 'PDF', resourceUrl: '', thumbnailUrl: '', durationMinutes: '' });
+      setFile(null);
       loadMaterials();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar el material.';
@@ -124,6 +134,7 @@ export default function AdminMaterialsPage() {
       thumbnailUrl: material.thumbnailUrl || '',
       durationMinutes: material.durationMinutes ? String(material.durationMinutes) : '',
     });
+    setFile(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -238,13 +249,23 @@ export default function AdminMaterialsPage() {
                 <option value="VIDEO">Video</option>
                 <option value="LINK">Enlace</option>
               </select>
-              <input
-                className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm md:col-span-2"
-                placeholder="URL del recurso"
-                value={formData.resourceUrl}
-                onChange={(event) => setFormData({ ...formData, resourceUrl: event.target.value })}
-                required
-              />
+              {formData.type === 'PDF' ? (
+                <input
+                  className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm md:col-span-2"
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  required={!editing}
+                />
+              ) : (
+                <input
+                  className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm md:col-span-2"
+                  placeholder="URL del recurso"
+                  value={formData.resourceUrl}
+                  onChange={(event) => setFormData({ ...formData, resourceUrl: event.target.value })}
+                  required
+                />
+              )}
               <input
                 className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
                 placeholder="URL de portada (opcional)"

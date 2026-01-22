@@ -33,6 +33,7 @@ import { LocalStrategy } from '../../infrastructure/security/local.strategy';
 
 import { AuthController } from './auth.controller';
 import { AdminController } from '../admin/admin.controller';
+import { InternalController } from '../internal/internal.controller';
 import { AdminService } from '../../application/admin/admin.service';
 
 import { RateLimitGuard } from '../../shared/guards/rate-limit.guard';
@@ -62,7 +63,7 @@ import { RolesGuard } from '../../shared/guards/roles.guard';
     }),
 
   ],
-  controllers: [AuthController, AdminController],
+  controllers: [AuthController, AdminController, InternalController],
 
   providers: [
     AuthService,

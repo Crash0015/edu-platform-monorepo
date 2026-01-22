@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum AdminUserStatusDto {
   ACTIVE = 'ACTIVE',
@@ -28,13 +29,20 @@ export class AdminUserQueryDto {
   @IsOptional()
   email?: string;
 
+  @ApiPropertyOptional({ example: 'Maria' })
+  @IsString()
+  @IsOptional()
+  search?: string;
+
   @ApiPropertyOptional({ example: 0 })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @IsOptional()
   offset?: number;
 
   @ApiPropertyOptional({ example: 25, maximum: 100 })
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -45,6 +53,12 @@ export class AdminUserQueryDto {
 export class AdminUserResponseDto {
   @ApiProperty({ example: 'uuid' })
   id!: string;
+
+  @ApiProperty({ example: 'Maria Lopez', required: false, nullable: true })
+  fullName?: string | null;
+
+  @ApiProperty({ example: '0102030405', required: false, nullable: true })
+  identificationNumber?: string | null;
 
   @ApiProperty({ example: 'student@uce.edu.ec' })
   email!: string;
@@ -72,8 +86,11 @@ export class AdminUserCreatedResponseDto {
   @ApiProperty({ type: AdminUserResponseDto })
   user!: AdminUserResponseDto;
 
-  @ApiProperty({ example: 'temporary password' })
-  temporaryPassword!: string;
+  @ApiProperty({ example: 'temporary password', required: false, nullable: true })
+  temporaryPassword?: string;
+
+  @ApiProperty({ example: 'https://frontend/auth/reset-password?token=...&email=...', required: false, nullable: true })
+  resetLink?: string;
 }
 
 export class AdminUserListResponseDto {
@@ -94,6 +111,23 @@ export class UpdateUserTypeDto {
   @ApiProperty({ enum: AdminUserTypeDto })
   @IsEnum(AdminUserTypeDto)
   userType!: AdminUserTypeDto;
+}
+
+export class UpdateUserProfileDto {
+  @ApiProperty({ example: 'student@uce.edu.ec', required: false })
+  @IsString()
+  @IsOptional()
+  email?: string;
+
+  @ApiProperty({ example: 'Maria Lopez', required: false })
+  @IsString()
+  @IsOptional()
+  fullName?: string;
+
+  @ApiProperty({ example: '0102030405', required: false })
+  @IsString()
+  @IsOptional()
+  identificationNumber?: string;
 }
 
 export class AdminMessageResponseDto {
@@ -118,13 +152,18 @@ export class AdminUsersReportDto {
 }
 
 export class CreateAdminUserDto {
-  @ApiProperty({ example: 'nuevo.docente@uce.edu.ec' })
+  @ApiProperty({ example: 'docente@correo.com' })
   @IsString()
   email!: string;
 
-  @ApiProperty({ example: 'María López' })
+  @ApiProperty({ example: 'Maria Lopez' })
   @IsString()
   fullName!: string;
+
+  @ApiProperty({ example: '0102030405', required: false })
+  @IsString()
+  @IsOptional()
+  identificationNumber?: string;
 
   @ApiProperty({ enum: AdminUserTypeDto })
   @IsEnum(AdminUserTypeDto)

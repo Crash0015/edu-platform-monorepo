@@ -16,6 +16,7 @@ import {
   BookingResponseDto,
   BookingStatusDto,
   CancelSessionRequestDto,
+  TeacherBookingResponseDto,
   ReserveSessionRequestDto,
   SessionResponseDto,
   SessionStatusDto,
@@ -203,6 +204,35 @@ export class SessionsController {
       studentId: booking.studentId,
       status: booking.status as BookingStatusDto,
       reservedAt: booking.reservedAt,
+    }));
+  }
+
+  @Get('sessions/teacher/:teacherId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List reserved tutoring sessions by teacher' })
+  @ApiOkResponse({ type: [TeacherBookingResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async listTeacherBookings(
+    @Param('teacherId') teacherId: string,
+    @Req() request: RequestWithUser,
+  ): Promise<TeacherBookingResponseDto[]> {
+    const context = this.createContext(request);
+    const results = await this.tutoringService.listTeacherBookings(teacherId, context);
+
+    return results.map(({ session, booking }) => ({
+      sessionId: session.id,
+      teacherId: session.teacherId,
+      courseId: session.courseId,
+      availabilitySlotId: session.availabilitySlotId,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      mode: session.mode as TutoringModeDto,
+      location: session.location ?? null,
+      meetingUrl: session.meetingUrl ?? null,
+      bookingId: booking?.id ?? null,
+      studentId: booking?.studentId ?? null,
+      bookingStatus: booking?.status ? (booking.status as BookingStatusDto) : null,
+      reservedAt: booking?.reservedAt ?? null,
     }));
   }
 }

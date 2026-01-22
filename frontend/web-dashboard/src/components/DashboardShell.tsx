@@ -18,6 +18,14 @@ type Profile = {
   status: string;
 };
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+};
+
 type DashboardShellProps = {
   title: string;
   requiredRoles: string[];
@@ -31,6 +39,8 @@ export default function DashboardShell({ title, requiredRoles, navItems, childre
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [openNotifications, setOpenNotifications] = useState(false);
 
   const activeHref = useMemo(() => navItems.find((item) => pathname.startsWith(item.href))?.href, [navItems, pathname]);
 
@@ -44,6 +54,12 @@ export default function DashboardShell({ title, requiredRoles, navItems, childre
           return;
         }
         setProfile(data);
+        try {
+          const response = await apiFetchAuth<{ items: NotificationItem[] }>(`/gateway/notifications/users/${data.id}`);
+          setNotifications(response.items || []);
+        } catch (err) {
+          console.error('Failed to load notifications', err);
+        }
       } catch (err) {
         console.error('Failed to load profile', err);
         setError(err instanceof Error ? err.message : 'Error al cargar el perfil de usuario');
@@ -69,6 +85,24 @@ export default function DashboardShell({ title, requiredRoles, navItems, childre
     } finally {
       clearTokens();
       router.push('/auth/login');
+    }
+  };
+
+  const unreadCount = notifications.filter((item) => !item.read).length;
+
+  const handleMarkRead = async () => {
+    if (!profile) {
+      return;
+    }
+    try {
+      const response = await apiFetchAuth<{ items: NotificationItem[] }>(
+        `/gateway/notifications/users/${profile.id}/read`,
+        { method: 'POST' },
+      );
+      setNotifications(response.items || []);
+      setOpenNotifications(false);
+    } catch (err) {
+      console.error('Failed to mark notifications as read', err);
     }
   };
 
@@ -136,12 +170,55 @@ export default function DashboardShell({ title, requiredRoles, navItems, childre
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">Panel</p>
                 <h1 className="text-2xl font-semibold">{title}</h1>
               </div>
-              <button
-                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold lg:hidden"
-                onClick={handleLogout}
-              >
-                Salir
-              </button>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <button
+                    className="relative rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold"
+                    onClick={() => setOpenNotifications((prev) => !prev)}
+                    type="button"
+                  >
+                    Notificaciones
+                    {unreadCount > 0 && (
+                      <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--primary)] px-2 text-xs font-semibold text-white">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+                  {openNotifications && (
+                    <div className="absolute right-0 z-20 mt-3 w-80 max-h-80 overflow-auto rounded-2xl border border-[var(--border)] bg-white p-4 shadow-lg">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">Actividad reciente</p>
+                        <button className="text-xs text-[var(--primary)]" onClick={handleMarkRead} type="button">
+                          Marcar como leidas
+                        </button>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {notifications.length === 0 ? (
+                          <p className="text-xs text-[var(--ink-muted)]">No hay notificaciones nuevas.</p>
+                        ) : (
+                          notifications.map((item) => (
+                            <div
+                              key={item.id}
+                              className={`rounded-xl border border-[var(--border)] px-3 py-2 text-xs ${
+                                item.read ? 'bg-[var(--surface-muted)] text-[var(--ink-muted)]' : 'bg-white'
+                              }`}
+                            >
+                              <p className="font-semibold text-[var(--ink)]">{item.title}</p>
+                              <p className="mt-1 text-[var(--ink-muted)]">{item.body}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold lg:hidden"
+                  onClick={handleLogout}
+                >
+                  Salir
+                </button>
+              </div>
             </div>
           </header>
           {children}

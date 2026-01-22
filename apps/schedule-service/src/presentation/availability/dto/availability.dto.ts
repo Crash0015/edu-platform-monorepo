@@ -59,6 +59,30 @@ export class UpdateAvailabilityStatusRequestDto {
   status!: AvailabilityStatusDto;
 }
 
+export class UpdateAvailabilityRequestDto {
+  @ApiProperty({ example: 'uuid', description: 'Optional course ID', required: false })
+  @IsUUID()
+  @IsOptional()
+  courseId?: string;
+
+  @ApiProperty({ example: '2026-01-20T10:00:00Z' })
+  @IsDateString()
+  startTime!: string;
+
+  @ApiProperty({ example: '2026-01-20T11:00:00Z' })
+  @IsDateString()
+  endTime!: string;
+
+  @ApiProperty({ example: 'America/Guayaquil' })
+  @IsString()
+  @IsNotEmpty()
+  timezone!: string;
+
+  @ApiProperty({ enum: AvailabilityStatusDto })
+  @IsEnum(AvailabilityStatusDto)
+  status!: AvailabilityStatusDto;
+}
+
 export class AvailabilityResponseDto {
   @ApiProperty({ example: 'uuid' })
   id!: string;

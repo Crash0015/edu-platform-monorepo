@@ -26,7 +26,17 @@ export default function TeacherAvailabilityPage() {
   const [slots, setSlots] = useState<Availability[]>([]);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({ courseId: '', startTime: '', endTime: '', timezone: 'America/Guayaquil', status: 'AVAILABLE' });
+  const [editingSlot, setEditingSlot] = useState<Availability | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [timeError, setTimeError] = useState('');
+
+  const courseLabel = (courseId?: string | null) => {
+    if (!courseId) {
+      return 'General';
+    }
+    const course = courses.find((item) => item.id === courseId);
+    return course ? `${course.code} · ${course.name}` : courseId;
+  };
 
   const loadAvailability = async () => {
     if (!profile?.id) {
@@ -59,19 +69,46 @@ export default function TeacherAvailabilityPage() {
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    setTimeError('');
     try {
-      await apiFetchAuth('/gateway/schedule/availability', {
-        method: 'POST',
-        body: JSON.stringify({
-          teacherId: profile?.id,
-          courseId: formData.courseId || undefined,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
-          timezone: formData.timezone,
-          status: formData.status,
-        }),
-      });
+      const start = new Date(formData.startTime);
+      const end = new Date(formData.endTime);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        setTimeError('Ingresa una fecha y hora valida.');
+        return;
+      }
+      if (start >= end) {
+        setTimeError('La hora de inicio debe ser menor que la hora de fin.');
+        return;
+      }
+      const payload = {
+        teacherId: profile?.id,
+        courseId: formData.courseId || undefined,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        timezone: formData.timezone,
+        status: formData.status,
+      };
+
+      if (editingSlot) {
+        await apiFetchAuth(`/gateway/schedule/availability/${editingSlot.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            courseId: payload.courseId,
+            startTime: payload.startTime,
+            endTime: payload.endTime,
+            timezone: payload.timezone,
+            status: payload.status,
+          }),
+        });
+      } else {
+        await apiFetchAuth('/gateway/schedule/availability', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
       setFormData({ courseId: '', startTime: '', endTime: '', timezone: 'America/Guayaquil', status: 'AVAILABLE' });
+      setEditingSlot(null);
       loadAvailability();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar disponibilidad.';
@@ -91,7 +128,7 @@ export default function TeacherAvailabilityPage() {
     <DashboardShell title="Docente" requiredRoles={['TEACHER']} navItems={teacherNav}>
       <div className="grid gap-6">
         <section className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Crear disponibilidad</h2>
+          <h2 className="text-xl font-semibold">{editingSlot ? 'Editar disponibilidad' : 'Crear disponibilidad'}</h2>
           <form onSubmit={handleCreate} className="mt-4 grid gap-4 md:grid-cols-2">
             <select
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
@@ -134,10 +171,23 @@ export default function TeacherAvailabilityPage() {
               <option value="BLOCKED">Bloqueado</option>
             </select>
             <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white md:col-span-2">
-              Guardar
+              {editingSlot ? 'Actualizar' : 'Guardar'}
             </button>
+            {editingSlot && (
+              <button
+                className="rounded-full border border-[var(--border)] px-5 py-2 text-sm font-semibold md:col-span-2"
+                type="button"
+                onClick={() => {
+                  setEditingSlot(null);
+                  setFormData({ courseId: '', startTime: '', endTime: '', timezone: 'America/Guayaquil', status: 'AVAILABLE' });
+                }}
+              >
+                Cancelar
+              </button>
+            )}
           </form>
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          {timeError && <p className="mt-3 text-sm text-red-600">{timeError}</p>}
         </section>
 
         <section className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
@@ -151,14 +201,31 @@ export default function TeacherAvailabilityPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold">{new Date(slot.startTime).toLocaleString()} - {new Date(slot.endTime).toLocaleString()}</p>
-                      <p className="text-xs text-[var(--ink-muted)]">{slot.courseId || 'General'} · {slot.status}</p>
+                      <p className="text-xs text-[var(--ink-muted)]">{courseLabel(slot.courseId)} · {slot.status}</p>
                     </div>
-                    <button
-                      className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
-                      onClick={() => handleDelete(slot.id)}
-                    >
-                      Eliminar
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                        onClick={() => {
+                          setEditingSlot(slot);
+                          setFormData({
+                            courseId: slot.courseId || '',
+                            startTime: slot.startTime.slice(0, 16),
+                            endTime: slot.endTime.slice(0, 16),
+                            timezone: slot.timezone,
+                            status: slot.status,
+                          });
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                        onClick={() => handleDelete(slot.id)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))

@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UnauthorizedException,
+  Req,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GatewayService } from '../../application/gateway/gateway.service';
 
@@ -95,14 +108,30 @@ export class GatewayController {
   })
   async assignEnrollment(
     @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
     @Headers('x-user-id') userId: string,
     @Headers('x-user-roles') userRoles: string,
   ) {
-    const headers = {
-      'x-user-id': userId ?? '',
-      'x-user-roles': userRoles ?? '',
-    };
-    return this.gatewayService.assignEnrollment(body, headers);
+    return this.gatewayService.assignEnrollment(body, {
+      ...headers,
+      'x-user-id': userId ?? headers['x-user-id'] ?? '',
+      'x-user-roles': userRoles ?? headers['x-user-roles'] ?? '',
+    });
+  }
+
+  @Post('enrollments/assign-with-profile')
+  @ApiOperation({ summary: 'Proxy enrollment with student profile creation (teacher only)' })
+  async assignEnrollmentWithProfile(
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+    @Headers('x-user-id') userId: string,
+    @Headers('x-user-roles') userRoles: string,
+  ) {
+    return this.gatewayService.enrollStudentWithProfile(body, {
+      ...headers,
+      'x-user-id': userId ?? headers['x-user-id'] ?? '',
+      'x-user-roles': userRoles ?? headers['x-user-roles'] ?? '',
+    });
   }
 
   @Get('enrollments/students/:studentId')
@@ -121,6 +150,62 @@ export class GatewayController {
     @Headers() headers: Record<string, string>,
   ) {
     return this.gatewayService.listEnrollmentsByCourse(courseId, headers);
+  }
+
+  @Delete('enrollments/:id')
+  @ApiOperation({ summary: 'Proxy drop enrollment' })
+  async dropEnrollment(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.dropEnrollment(id, headers);
+  }
+
+  @Delete('students/:id')
+  @ApiOperation({ summary: 'Delete student user (Teacher/Admin only)' })
+  async deleteStudent(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    const roles = this.extractRoles(headers);
+    if (!roles.includes('TEACHER') && !roles.includes('ADMIN')) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+    return this.gatewayService.deleteStudentUser(id);
+  }
+
+  @Get('students')
+  @ApiOperation({ summary: 'List student users (Teacher/Admin only)' })
+  async listStudents(
+    @Query() query: Record<string, string>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    const roles = this.extractRoles(headers);
+    if (!roles.includes('TEACHER') && !roles.includes('ADMIN')) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+    return this.gatewayService.listStudents(query);
+  }
+
+  private extractRoles(headers: Record<string, string>) {
+    const rolesHeader = headers['x-user-roles'] || headers['X-User-Roles'] || '';
+    const roles = rolesHeader
+      ? rolesHeader.split(',').map((role) => role.trim())
+      : this.decodeRolesFromToken(headers['authorization'] || headers['Authorization']);
+    return roles;
+  }
+
+  private decodeRolesFromToken(authHeader?: string): string[] {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return [];
+    }
+    const token = authHeader.split(' ')[1];
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      return [];
+    }
+    try {
+      const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+      const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8')) as { roles?: string[] };
+      return Array.isArray(payload.roles) ? payload.roles : [];
+    } catch {
+      return [];
+    }
   }
 
   @Post('courses')
@@ -218,6 +303,33 @@ export class GatewayController {
     return this.gatewayService.enqueueEmail(body, headers);
   }
 
+  @Post('notifications/internal')
+  @ApiOperation({ summary: 'Proxy create in-app notification' })
+  async createNotification(
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.createInAppNotification(body, headers);
+  }
+
+  @Get('notifications/users/:userId')
+  @ApiOperation({ summary: 'Proxy list user notifications' })
+  async listNotifications(
+    @Param('userId') userId: string,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.listNotifications(userId, headers);
+  }
+
+  @Post('notifications/users/:userId/read')
+  @ApiOperation({ summary: 'Proxy mark user notifications as read' })
+  async markNotificationsRead(
+    @Param('userId') userId: string,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.markNotificationsRead(userId, headers);
+  }
+
   @Post('automation/queue')
   @ApiOperation({ summary: 'Proxy automation queue' })
   async queueAutomation(
@@ -271,6 +383,16 @@ export class GatewayController {
     return this.gatewayService.updateScheduleAvailabilityStatus(id, body, headers);
   }
 
+  @Put('schedule/availability/:id')
+  @ApiOperation({ summary: 'Proxy schedule availability update' })
+  async updateScheduleAvailability(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateScheduleAvailability(id, body, headers);
+  }
+
   @Get('tutoring/sessions/available')
   @ApiOperation({ summary: 'Proxy available tutoring sessions' })
   async listAvailableSessions(
@@ -296,6 +418,12 @@ export class GatewayController {
   @ApiOperation({ summary: 'Proxy tutoring session details' })
   async getTutoringSession(@Param('id') id: string, @Headers() headers: Record<string, string>) {
     return this.gatewayService.getSessionById(id, headers);
+  }
+
+  @Get('tutoring/sessions/teacher/:teacherId')
+  @ApiOperation({ summary: 'Proxy tutoring sessions by teacher' })
+  async listTeacherBookings(@Param('teacherId') teacherId: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.listTeacherBookings(teacherId, headers);
   }
 
   @Get('search/enrollments/:studentId')
@@ -326,6 +454,12 @@ export class GatewayController {
   @ApiOperation({ summary: 'Proxy material creation' })
   async createMaterial(@Body() body: Record<string, unknown>, @Headers() headers: Record<string, string>) {
     return this.gatewayService.createMaterial(body, headers);
+  }
+
+  @Post('materials/uploads')
+  @ApiOperation({ summary: 'Proxy material asset upload' })
+  async uploadMaterial(@Req() req: { body: Buffer }, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.uploadMaterialAsset(req.body, headers);
   }
 
   @Patch('materials/:id')
@@ -388,10 +522,26 @@ export class GatewayController {
     return this.gatewayService.updateAdminUserType(id, body, headers);
   }
 
+  @Patch('admin/users/:id')
+  @ApiOperation({ summary: 'Admin update user profile' })
+  async updateAdminUserProfile(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string>,
+  ) {
+    return this.gatewayService.updateAdminUserProfile(id, body, headers);
+  }
+
   @Post('admin/users/:id/mfa/reset')
   @ApiOperation({ summary: 'Admin reset user MFA' })
   async resetAdminUserMfa(@Param('id') id: string, @Headers() headers: Record<string, string>) {
     return this.gatewayService.resetAdminUserMfa(id, headers);
+  }
+
+  @Delete('admin/users/:id')
+  @ApiOperation({ summary: 'Admin delete user' })
+  async deleteAdminUser(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.deleteAdminUser(id, headers);
   }
 
   @Get('admin/reports/users')
@@ -404,6 +554,12 @@ export class GatewayController {
   @ApiOperation({ summary: 'Admin enrollments list' })
   async listAdminEnrollments(@Headers() headers: Record<string, string>) {
     return this.gatewayService.listAdminEnrollments(headers);
+  }
+
+  @Delete('admin/enrollments/:id')
+  @ApiOperation({ summary: 'Admin drop enrollment' })
+  async dropAdminEnrollment(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    return this.gatewayService.dropEnrollment(id, headers);
   }
 
   @Get('admin/courses')
@@ -483,6 +639,10 @@ export class GatewayController {
   @Get('admin/schedule/availability')
   @ApiOperation({ summary: 'Admin availability list' })
   async listAdminAvailability(@Query() query: Record<string, string>, @Headers() headers: Record<string, string>) {
+    const roles = this.extractRoles(headers);
+    if (!roles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
     return this.gatewayService.listAdminAvailability(query, headers);
   }
 
@@ -492,6 +652,10 @@ export class GatewayController {
     @Body() body: Record<string, unknown>,
     @Headers() headers: Record<string, string>,
   ) {
+    const roles = this.extractRoles(headers);
+    if (!roles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
     return this.gatewayService.createScheduleAvailability(body, headers);
   }
 
@@ -502,12 +666,20 @@ export class GatewayController {
     @Body() body: Record<string, unknown>,
     @Headers() headers: Record<string, string>,
   ) {
+    const roles = this.extractRoles(headers);
+    if (!roles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
     return this.gatewayService.updateScheduleAvailabilityStatus(id, body, headers);
   }
 
   @Delete('admin/schedule/availability/:id')
   @ApiOperation({ summary: 'Admin availability delete' })
   async deleteAdminAvailability(@Param('id') id: string, @Headers() headers: Record<string, string>) {
+    const roles = this.extractRoles(headers);
+    if (!roles.includes('ADMIN')) {
+      throw new UnauthorizedException('Admin role required');
+    }
     return this.gatewayService.deleteScheduleAvailability(id, headers);
   }
 

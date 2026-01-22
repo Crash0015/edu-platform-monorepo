@@ -51,6 +51,10 @@ export interface TutoringRepository {
   findBookingBySessionId(sessionId: string): Promise<BookingRecord | null>;
   findBookingById(id: string): Promise<BookingRecord | null>;
   listSessions(): Promise<TutoringSessionRecord[]>;
+  listSessionsByTeacher(
+    teacherId: string,
+    status?: TutoringSessionStatus,
+  ): Promise<Array<{ session: TutoringSessionRecord; booking: BookingRecord | null }>>;
   listBookings(): Promise<BookingRecord[]>;
   cancelBooking(bookingId: string, updatedBy?: string | null): Promise<BookingRecord | null>;
   updateSessionStatus(sessionId: string, status: TutoringSessionStatus, updatedBy?: string | null): Promise<void>;

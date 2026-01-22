@@ -18,6 +18,33 @@ export class CreateEnrollmentRequestDto {
   correlationId?: string;
 }
 
+export class CreateEnrollmentWithProfileRequestDto {
+  @ApiProperty({ example: 'student@uce.edu.ec' })
+  @IsString()
+  @IsNotEmpty()
+  email!: string;
+
+  @ApiProperty({ example: 'Juan Perez' })
+  @IsString()
+  @IsNotEmpty()
+  fullName!: string;
+
+  @ApiProperty({ example: '0102030405', required: false })
+  @IsString()
+  @IsOptional()
+  identificationNumber?: string;
+
+  @ApiProperty({ example: 'uuid' })
+  @IsString()
+  @IsNotEmpty()
+  courseId!: string;
+
+  @ApiProperty({ example: 'uuid' })
+  @IsString()
+  @IsOptional()
+  correlationId?: string;
+}
+
 export class EnrollmentResponseDto {
   @ApiProperty({ example: 'uuid' })
   id!: string;

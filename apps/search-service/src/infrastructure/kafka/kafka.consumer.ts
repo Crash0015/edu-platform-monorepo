@@ -53,10 +53,36 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
           return;
         }
 
+        let courseData = { code: '', name: 'Curso', description: '' };
+        try {
+          // Intentar obtener detalles del curso
+          const courseServiceUrl = this.configService.get<string>('COURSE_SERVICE_URL', 'http://course-service:3004');
+          if (typeof fetch !== 'undefined') {
+            const res = await fetch(`${courseServiceUrl}/api/v1/courses/${event.payload.course_id}`);
+            if (res.ok) {
+              const course = (await res.json()) as { code: string; name: string; description: string };
+              courseData = {
+                code: course.code,
+                name: course.name,
+                description: course.description || '',
+              };
+            }
+          }
+        } catch (error) {
+          // Ignorar error de fetch para no bloquear el proceso
+          console.warn(`Failed to fetch course details for ${event.payload.course_id}`);
+        }
+
         await this.projectionService.applyEnrollmentCreated({
           studentId: event.payload.student_id,
           courseId: event.payload.course_id,
           status: 'ACTIVE',
+          course: {
+            id: event.payload.course_id, // EXPLICIT ID SAVE
+            code: courseData.code,
+            name: courseData.name,
+            description: courseData.description,
+          },
         });
       },
     });

@@ -2,6 +2,7 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { raw } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 
@@ -36,6 +37,8 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  app.use('/api/v1/gateway/materials/uploads', raw({ type: '*/*', limit: '25mb' }));
 
   const swaggerEnabled = configService.get<string>('SWAGGER_ENABLED', 'true') !== 'false';
   if (swaggerEnabled) {

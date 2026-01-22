@@ -1,10 +1,11 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Channel, ChannelModel, connect } from 'amqplib';
 
 
 @Injectable()
 export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(RabbitMqService.name);
   private connection?: ChannelModel;
   private channel?: Channel;
 
@@ -13,7 +14,7 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     const url = this.configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672');
-    this.connection = await connect(url);
+    this.connection = await this.connectWithRetry(url);
     this.channel = await this.connection.createChannel();
 
   }
@@ -58,5 +59,21 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
 
   async healthCheck(): Promise<boolean> {
     return Boolean(this.channel);
+  }
+
+  private async connectWithRetry(url: string, attempts = 8, delayMs = 1500): Promise<ChannelModel> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const connection = await connect(url);
+        this.logger.log('RabbitMQ connection established');
+        return connection;
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(`RabbitMQ connection failed (attempt ${attempt}/${attempts})`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw lastError;
   }
 }

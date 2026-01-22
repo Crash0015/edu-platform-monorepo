@@ -1,3 +1,3 @@
-const INSTITUTIONAL_DOMAIN_REGEX = /^[^@]+@uce\.edu\.ec$/i;
+const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
 
-export const isInstitutionalEmail = (email: string) => INSTITUTIONAL_DOMAIN_REGEX.test(email);
+export const isInstitutionalEmail = (email: string) => EMAIL_REGEX.test(email);

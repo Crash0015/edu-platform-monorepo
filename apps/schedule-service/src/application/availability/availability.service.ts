@@ -194,4 +194,53 @@ export class AvailabilityService {
 
     return updated;
   }
+
+  async updateAvailability(
+    id: string,
+    input: {
+      courseId?: string | null;
+      startTime: string;
+      endTime: string;
+      timezone: string;
+      status: 'AVAILABLE' | 'BLOCKED';
+    },
+    context: RequestContext,
+  ): Promise<AvailabilityRecord> {
+    if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+
+    const slot = await this.availabilityRepository.findById(id);
+    if (!slot) {
+      throw new NotFoundException('Availability slot not found');
+    }
+    if (context.actorRoles.includes('TEACHER') && slot.teacherId !== context.actorUserId) {
+      throw new UnauthorizedException('Teachers can only manage their own availability');
+    }
+
+    const startTime = new Date(input.startTime);
+    const endTime = new Date(input.endTime);
+    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+      throw new BadRequestException('Invalid start or end time');
+    }
+
+    const overlap = await this.availabilityRepository.findOverlap(slot.teacherId, startTime, endTime);
+    if (overlap && overlap.id !== id && input.status === 'AVAILABLE') {
+      throw new BadRequestException('Availability slot overlaps with an existing slot');
+    }
+
+    const updated = await this.availabilityRepository.updateAvailability(id, {
+      courseId: input.courseId ?? null,
+      startTime,
+      endTime,
+      timezone: input.timezone,
+      status: input.status,
+      updatedBy: context.actorUserId,
+    });
+    if (!updated) {
+      throw new NotFoundException('Availability slot not found');
+    }
+
+    return updated;
+  }
 }

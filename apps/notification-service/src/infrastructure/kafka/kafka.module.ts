@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EnrollmentKafkaConsumer } from './kafka.consumer';
+import { NotificationModule } from '../../presentation/notifications/notification.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, forwardRef(() => NotificationModule)],
   providers: [EnrollmentKafkaConsumer],
   exports: [EnrollmentKafkaConsumer],
 })

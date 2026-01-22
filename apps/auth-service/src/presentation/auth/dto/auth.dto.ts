@@ -11,7 +11,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-const INSTITUTIONAL_EMAIL_REGEX = /^[^@]+@uce\.edu\.ec$/i;
+const INSTITUTIONAL_EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,}$/;
 const USER_TYPES = ['TEACHER', 'STUDENT', 'ADMIN'] as const;
 type RegisterUserType = (typeof USER_TYPES)[number];
@@ -20,7 +20,7 @@ type RegisterUserType = (typeof USER_TYPES)[number];
 export class LoginRequestDto {
   @ApiProperty({ example: 'student@uce.edu.ec' })
   @IsEmail()
-  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email must end with @uce.edu.ec' })
+  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email is invalid' })
   email!: string;
 
   @ApiProperty({ example: 'StrongPassword123!' })
@@ -32,7 +32,7 @@ export class LoginRequestDto {
 export class RegisterRequestDto {
   @ApiProperty({ example: 'student@uce.edu.ec' })
   @IsEmail()
-  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email must end with @uce.edu.ec' })
+  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email is invalid' })
   email!: string;
 
   @ApiProperty({ example: 'StrongPassword123!' })
@@ -136,7 +136,7 @@ export class LogoutRequestDto {
 export class ForgotPasswordRequestDto {
   @ApiProperty({ example: 'student@uce.edu.ec' })
   @IsEmail()
-  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email must end with @uce.edu.ec' })
+  @Matches(INSTITUTIONAL_EMAIL_REGEX, { message: 'email is invalid' })
   email!: string;
 }
 

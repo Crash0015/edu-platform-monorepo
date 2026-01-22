@@ -70,24 +70,63 @@ export class EnrollmentKafkaConsumer implements OnModuleInit, OnModuleDestroy {
 
   private async handleEnrollmentCreated(event: EnrollmentEvent) {
     const userServiceUrl = this.configService.get<string>('USER_SERVICE_URL', 'http://user-service:3008');
+    const courseServiceUrl = this.configService.get<string>('COURSE_SERVICE_URL', 'http://course-service:3004');
     try {
-      const response = await fetch(`${userServiceUrl}/api/v1/users/${event.payload.student_id}`);
-      if (!response.ok) {
+      if (typeof fetch === 'undefined') {
+        this.logger.warn('Fetch is not available to resolve enrollment details');
+        return;
+      }
+      const [userResponse, courseResponse] = await Promise.all([
+        fetch(`${userServiceUrl}/api/v1/users/${event.payload.student_id}`),
+        fetch(`${courseServiceUrl}/api/v1/courses/${event.payload.course_id}`),
+      ]);
+      if (!userResponse.ok) {
         this.logger.warn(`User not found for enrollment ${event.payload.enrollment_id}`);
         return;
       }
-      const user = (await response.json()) as { email?: string };
+      const user = (await userResponse.json()) as { email?: string; fullName?: string | null };
+      const course = courseResponse.ok ? ((await courseResponse.json()) as { code?: string; name?: string }) : null;
       if (!user?.email) {
         this.logger.warn(`Missing email for enrollment ${event.payload.enrollment_id}`);
         return;
       }
 
+      const notificationUrl = this.configService.get<string>('NOTIFICATION_SERVICE_URL', '').trim();
+      const correlationId = event.correlation_id;
+      let teacherName = 'Docente';
+      if (event.payload.assigned_by) {
+        const teacherResponse = await fetch(`${userServiceUrl}/api/v1/users/${event.payload.assigned_by}`);
+        if (teacherResponse.ok) {
+          const teacher = (await teacherResponse.json()) as { fullName?: string | null; email?: string };
+          teacherName = teacher.fullName || teacher.email || teacherName;
+        }
+      }
+
       await this.notificationService.enqueueEmail({
         to: user.email,
-        subject: 'Enrollment confirmed',
-        body: `You have been enrolled in course ${event.payload.course_id}.`,
-        correlationId: event.correlation_id,
+        subject: 'Matricula confirmada',
+        body: `Hola ${user.fullName ?? 'estudiante'},\n\nHas sido matriculado en ${course?.code ? `${course.code} - ` : ''}${course?.name ?? 'el curso'} por ${teacherName}.\n\nPuedes ingresar a la plataforma para ver los detalles.`,
+        correlationId,
       });
+
+      if (notificationUrl) {
+        const targetUrl = `${notificationUrl.replace(/\/$/, '')}/api/v1/notifications/internal`;
+        await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: event.payload.student_id,
+            title: 'Nueva matricula',
+            body: `Te matriculo ${teacherName} en ${course?.code ? `${course.code} - ` : ''}${course?.name ?? 'el curso'}.`,
+            metadata: {
+              enrollmentId: event.payload.enrollment_id,
+              courseId: event.payload.course_id,
+              teacherId: event.payload.assigned_by,
+            },
+            correlationId,
+          }),
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to process enrollment email: ${message}`);

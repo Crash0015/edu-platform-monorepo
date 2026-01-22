@@ -10,6 +10,8 @@ import { PasswordHasher, TokenService } from '../auth/ports/auth.security';
 
 type AdminUserRecord = {
   id: string;
+  fullName?: string | null;
+  identificationNumber?: string | null;
   email: string;
   status: AdminUserStatusDto;
   userType: AdminUserTypeDto;
@@ -44,20 +46,34 @@ export class AdminService {
   async createUser(input: {
     email: string;
     fullName: string;
+    identificationNumber?: string;
     userType: AdminUserTypeDto;
     status?: AdminUserStatusDto;
-  }): Promise<{ user: AdminUserRecord; temporaryPassword: string }> {
+  }): Promise<{ user: AdminUserRecord; temporaryPassword?: string; resetLink?: string }> {
     const normalizedEmail = input.email.toLowerCase();
 
     if (!isInstitutionalEmail(normalizedEmail)) {
       throw new BadRequestException({
         message: 'Validation failed',
-        details: ['email must end with @uce.edu.ec'],
+        details: ['email is invalid'],
       });
     }
 
-    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: {
+        roles: { include: { role: true } },
+        mfaSecret: true,
+      },
+    });
     if (existing) {
+      if (input.userType === AdminUserTypeDto.STUDENT) {
+        return {
+          user: this.mapUser(existing),
+          temporaryPassword: undefined,
+          resetLink: undefined,
+        };
+      }
       throw new BadRequestException('User already exists');
     }
 
@@ -68,9 +84,20 @@ export class AdminService {
       data: {
         email: normalizedEmail,
         fullName: input.fullName,
+        identificationNumber: input.identificationNumber,
         userType: input.userType,
         status: input.status ?? AdminUserStatusDto.ACTIVE,
         passwordHash,
+        roles: {
+          create: {
+            role: {
+              connectOrCreate: {
+                where: { name: input.userType },
+                create: { name: input.userType },
+              },
+            },
+          },
+        },
       },
       include: {
         roles: { include: { role: true } },
@@ -78,13 +105,19 @@ export class AdminService {
       },
     });
 
-    // Option: Send email with password or reset link here if needed
-    // const resetLink = await this.createResetLink(created.id, created.email);
-    // await this.sendResetEmail({ email: created.email, fullName: created.fullName ?? created.email, resetLink });
+    let resetLink: string | undefined;
+    resetLink = await this.createResetLink(created.id, created.email);
+    await this.sendResetEmail({
+      email: created.email,
+      fullName: created.fullName ?? created.email,
+      resetLink,
+    });
+    await this.sendWelcomeNotification(created.id, created.email, created.fullName ?? created.email);
 
     return {
       user: this.mapUser(created),
       temporaryPassword: placeholderPassword,
+      resetLink,
     };
   }
 
@@ -92,6 +125,7 @@ export class AdminService {
     status?: AdminUserStatusDto;
     userType?: AdminUserTypeDto;
     email?: string;
+    search?: string;
     offset?: number;
     limit?: number;
   }): Promise<{ items: AdminUserRecord[]; total: number }> {
@@ -104,6 +138,12 @@ export class AdminService {
     }
     if (filters.email) {
       where.email = { contains: filters.email, mode: 'insensitive' };
+    }
+    if (filters.search) {
+      where.OR = [
+        { email: { contains: filters.search, mode: 'insensitive' } },
+        { fullName: { contains: filters.search, mode: 'insensitive' } },
+      ];
     }
 
     const take = Math.min(filters.limit ?? 25, 100);
@@ -132,6 +172,23 @@ export class AdminService {
   async getUserById(userId: string): Promise<AdminUserRecord> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        roles: { include: { role: true } },
+        mfaSecret: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.mapUser(user);
+  }
+
+  async getUserByEmail(email: string): Promise<AdminUserRecord> {
+    const normalizedEmail = email.toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
       include: {
         roles: { include: { role: true } },
         mfaSecret: true,
@@ -185,6 +242,65 @@ export class AdminService {
     });
 
     return this.mapUser(updated);
+  }
+
+  async updateUserProfile(
+    userId: string,
+    input: { email?: string; fullName?: string; identificationNumber?: string },
+  ): Promise<AdminUserRecord> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    let email = input.email?.toLowerCase();
+    if (email) {
+      if (!isInstitutionalEmail(email)) {
+        throw new BadRequestException({
+          message: 'Validation failed',
+          details: ['email is invalid'],
+        });
+      }
+      const existing = await this.prisma.user.findUnique({ where: { email } });
+      if (existing && existing.id !== userId) {
+        throw new BadRequestException('Email already in use');
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: email ?? undefined,
+        fullName: input.fullName ?? undefined,
+        identificationNumber: input.identificationNumber ?? undefined,
+      },
+      include: {
+        roles: { include: { role: true } },
+        mfaSecret: true,
+      },
+    });
+
+    return this.mapUser(updated);
+  }
+
+  async deleteUser(userId: string, options?: { requireStudent?: boolean }): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (options?.requireStudent && user.userType !== AdminUserTypeDto.STUDENT) {
+      throw new BadRequestException('Only student accounts can be deleted');
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return 'User deleted successfully';
   }
 
   async resetUserMfa(userId: string): Promise<string> {
@@ -242,6 +358,8 @@ export class AdminService {
 
   private mapUser(user: {
     id: string;
+    fullName: string | null;
+    identificationNumber: string | null;
     email: string;
     status: string;
     userType: string;
@@ -258,6 +376,8 @@ export class AdminService {
 
     return {
       id: user.id,
+      fullName: user.fullName ?? null,
+      identificationNumber: user.identificationNumber ?? null,
       email: user.email,
       status: user.status as AdminUserStatusDto,
       userType: user.userType as AdminUserTypeDto,
@@ -307,7 +427,13 @@ export class AdminService {
       return;
     }
 
-    const url = `${notificationUrl.replace(/\/$/, '')}/notifications/email`;
+    if (typeof fetch === 'undefined') {
+      this.logger.warn('Fetch is not available in this runtime; skipping reset email dispatch');
+      return;
+    }
+
+    const endpointPath = this.configService.get<string>('NOTIFICATION_EMAIL_ENDPOINT', '/api/v1/notifications/email');
+    const url = `${notificationUrl.replace(/\/$/, '')}${endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`}`;
     const payload = {
       to: input.email,
       subject: 'Restablece tu acceso a la FCA',
@@ -334,6 +460,35 @@ export class AdminService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to send reset email: ${message}`);
+    }
+  }
+
+  private async sendWelcomeNotification(userId: string, email: string, fullName: string) {
+    const notificationUrl = this.configService.get<string>('NOTIFICATION_SERVICE_URL', '').trim();
+    if (!notificationUrl) {
+      this.logger.warn('NOTIFICATION_SERVICE_URL not set; skipping welcome notification');
+      return;
+    }
+    if (typeof fetch === 'undefined') {
+      this.logger.warn('Fetch is not available in this runtime; skipping welcome notification');
+      return;
+    }
+    const url = `${notificationUrl.replace(/\/$/, '')}/api/v1/notifications/internal`;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          title: 'Cuenta creada',
+          body: `Hola ${fullName}, tu cuenta fue creada por la administracion.`,
+          metadata: { email },
+          correlationId: randomUUID(),
+        }),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to send welcome notification: ${message}`);
     }
   }
 }

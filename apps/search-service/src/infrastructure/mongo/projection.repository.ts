@@ -24,6 +24,7 @@ export class MongoProjectionRepository implements ProjectionRepository {
       studentId: item.studentId,
       courseId: item.courseId,
       status: item.status,
+      course: item.course,
     }));
   }
 }

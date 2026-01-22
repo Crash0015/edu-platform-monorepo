@@ -19,4 +19,5 @@ export interface MaterialsClient {
   getMaterial(id: string): Promise<MaterialRecord | null>;
   updateMaterial(id: string, payload: Record<string, unknown>): Promise<MaterialRecord | null>;
   deleteMaterial(id: string): Promise<void>;
+  uploadAsset(file: { buffer: Buffer; filename: string; mimetype: string }): Promise<string>;
 }

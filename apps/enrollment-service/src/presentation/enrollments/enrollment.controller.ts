@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import {
   ApiBadRequestResponse,
@@ -10,8 +10,10 @@ import {
 } from '@nestjs/swagger';
 
 import { EnrollmentService } from '../../application/enrollments/enrollment.service';
+import { EnrollmentQueryService } from '../../application/enrollments/queries/enrollment.query.service';
 import {
   CreateEnrollmentRequestDto,
+  CreateEnrollmentWithProfileRequestDto,
   EnrollmentAdminDto,
   EnrollmentResponseDto,
   EnrollmentWithCourseDto,
@@ -33,7 +35,10 @@ const getHeaderValue = (value: string | string[] | undefined) => {
 @ApiTags('enrollments')
 @Controller('enrollments')
 export class EnrollmentController {
-  constructor(private readonly enrollmentService: EnrollmentService) {}
+  constructor(
+    private readonly enrollmentService: EnrollmentService,
+    private readonly enrollmentQueryService: EnrollmentQueryService,
+  ) {}
 
   private createContext(request: RequestWithUser): {
     actorUserId: string | null;
@@ -96,6 +101,31 @@ export class EnrollmentController {
     });
   }
 
+  @Post('assign-with-profile')
+  @HttpCode(201)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create student profile and assign to course (teacher/admin)' })
+  @ApiOkResponse({ type: EnrollmentResponseDto })
+  @ApiBadRequestResponse({ description: 'Validation failed' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async assignWithProfile(
+    @Body() body: CreateEnrollmentWithProfileRequestDto,
+    @Req() request: RequestWithUser,
+  ): Promise<EnrollmentResponseDto> {
+    const context = this.createContext(request);
+    const correlationId = getHeaderValue(request.headers['x-correlation-id']) || this.generateUUID();
+
+    return this.enrollmentService.assignEnrollmentWithProfile({
+      email: body.email,
+      fullName: body.fullName,
+      identificationNumber: body.identificationNumber,
+      courseId: body.courseId,
+      correlationId: body.correlationId || correlationId,
+      actorUserId: context.actorUserId,
+      actorRoles: context.actorRoles,
+    });
+  }
+
   @Get('students/:studentId')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all enrollments for a student (with course details)' })
@@ -106,7 +136,8 @@ export class EnrollmentController {
     @Req() request: RequestWithUser,
   ): Promise<EnrollmentWithCourseDto[]> {
     const context = this.createContext(request);
-    return this.enrollmentService.getEnrollmentsByStudent(studentId, context);
+    const enrollments = await this.enrollmentQueryService.getEnrollmentsByStudent(studentId, context);
+    return this.enrollmentService.buildEnrollmentCourseView(enrollments);
   }
 
   @Get('courses/:courseId')
@@ -119,7 +150,18 @@ export class EnrollmentController {
     @Req() request: RequestWithUser,
   ): Promise<EnrollmentWithStudentDto[]> {
     const context = this.createContext(request);
-    return this.enrollmentService.getEnrollmentsByCourse(courseId, context);
+    const enrollments = await this.enrollmentQueryService.getEnrollmentsByCourse(courseId, context);
+    return this.enrollmentService.buildEnrollmentStudentView(enrollments);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Drop enrollment (Teacher/Admin only)' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async dropEnrollment(@Param('id') id: string, @Req() request: RequestWithUser): Promise<void> {
+    const context = this.createContext(request);
+    await this.enrollmentService.dropEnrollment(id, context);
   }
 
   @Get()
@@ -129,7 +171,8 @@ export class EnrollmentController {
   @ApiUnauthorizedResponse({ description: 'Admin role required' })
   async getAllEnrollments(@Req() request: RequestWithUser): Promise<EnrollmentAdminDto[]> {
     const context = this.createContext(request);
-    return this.enrollmentService.getAllEnrollments(context);
+    const enrollments = await this.enrollmentQueryService.getAllEnrollments(context);
+    return this.enrollmentService.buildEnrollmentAdminView(enrollments);
   }
 
   private generateUUID(): string {

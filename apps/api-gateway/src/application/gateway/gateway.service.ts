@@ -133,6 +133,16 @@ export class GatewayService {
     );
   }
 
+  async enrollStudentWithProfile(payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.postToService(
+      'ENROLLMENT_SERVICE_URL',
+      'http://127.0.0.1:3007',
+      '/api/v1/enrollments/assign-with-profile',
+      payload,
+      headers,
+    );
+  }
+
   async getCourse(id: string, headers: Record<string, string>) {
     return this.getFromService(
       'COURSE_SERVICE_URL',
@@ -262,6 +272,35 @@ export class GatewayService {
       'http://127.0.0.1:3005',
       '/api/v1/notifications/email',
       payload,
+      headers,
+    );
+  }
+
+  async createInAppNotification(payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.postToService(
+      'NOTIFICATION_SERVICE_URL',
+      'http://127.0.0.1:3005',
+      '/api/v1/notifications/internal',
+      payload,
+      headers,
+    );
+  }
+
+  async listNotifications(userId: string, headers: Record<string, string>) {
+    return this.getFromService(
+      'NOTIFICATION_SERVICE_URL',
+      'http://127.0.0.1:3005',
+      `/api/v1/notifications/users/${userId}`,
+      headers,
+    );
+  }
+
+  async markNotificationsRead(userId: string, headers: Record<string, string>) {
+    return this.postToService(
+      'NOTIFICATION_SERVICE_URL',
+      'http://127.0.0.1:3005',
+      `/api/v1/notifications/users/${userId}/read`,
+      {},
       headers,
     );
   }
@@ -424,6 +463,20 @@ export class GatewayService {
     );
   }
 
+  async uploadMaterialAsset(payload: Buffer, headers: Record<string, string>) {
+    const baseUrl = this.getServiceUrl('MATERIAL_SERVICE_URL', 'http://127.0.0.1:3012');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${baseUrl}/api/v1/materials/uploads`, payload, {
+          headers: this.buildHeaders(headers),
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
+  }
+
   async updateMaterial(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
     return this.patchToService(
       'MATERIAL_SERVICE_URL',
@@ -502,6 +555,16 @@ export class GatewayService {
     );
   }
 
+  async updateAdminUserProfile(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.patchToService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      `/api/v1/admin/users/${id}`,
+      payload,
+      headers,
+    );
+  }
+
   async resetAdminUserMfa(id: string, headers: Record<string, string>) {
     return this.postToService(
       'AUTH_SERVICE_URL',
@@ -510,6 +573,52 @@ export class GatewayService {
       {},
       headers,
     );
+  }
+
+  async deleteAdminUser(id: string, headers: Record<string, string>) {
+    return this.deleteFromService(
+      'AUTH_SERVICE_URL',
+      'http://127.0.0.1:3001',
+      `/api/v1/admin/users/${id}`,
+      headers,
+    );
+  }
+
+  async deleteStudentUser(id: string) {
+    const baseUrl = this.getServiceUrl('AUTH_SERVICE_URL', 'http://127.0.0.1:3001');
+    const internalKey = this.configService.get<string>('INTERNAL_API_KEY', '').trim();
+    const headers: Record<string, string> = {};
+    if (internalKey) {
+      headers['x-internal-key'] = internalKey;
+    }
+    try {
+      const response = await firstValueFrom(
+        this.httpService.delete(`${baseUrl}/api/v1/internal/users/${id}`, { headers: this.buildHeaders(headers) }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
+  }
+
+  async listStudents(params: Record<string, string> = {}) {
+    const baseUrl = this.getServiceUrl('AUTH_SERVICE_URL', 'http://127.0.0.1:3001');
+    const internalKey = this.configService.get<string>('INTERNAL_API_KEY', '').trim();
+    const headers: Record<string, string> = {};
+    if (internalKey) {
+      headers['x-internal-key'] = internalKey;
+    }
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${baseUrl}/api/v1/internal/users`, {
+          headers: this.buildHeaders(headers),
+          params: { ...params, userType: 'STUDENT' },
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
   }
 
   async getAdminUsersReport(headers: Record<string, string>) {
@@ -530,6 +639,15 @@ export class GatewayService {
     );
   }
 
+  async dropEnrollment(enrollmentId: string, headers: Record<string, string>) {
+    return this.deleteFromService(
+      'ENROLLMENT_SERVICE_URL',
+      'http://127.0.0.1:3007',
+      `/api/v1/enrollments/${enrollmentId}`,
+      headers,
+    );
+  }
+
   async listAdminAvailability(params: Record<string, string>, headers: Record<string, string>) {
     return this.getFromService(
       'SCHEDULE_SERVICE_URL',
@@ -537,6 +655,16 @@ export class GatewayService {
       '/api/v1/schedule/availability',
       headers,
       params,
+    );
+  }
+
+  async updateScheduleAvailability(id: string, payload: Record<string, unknown>, headers: Record<string, string>) {
+    return this.putToService(
+      'SCHEDULE_SERVICE_URL',
+      'http://127.0.0.1:3009',
+      `/api/v1/schedule/availability/${id}`,
+      payload,
+      headers,
     );
   }
 
@@ -554,6 +682,15 @@ export class GatewayService {
       'TUTORING_SERVICE_URL',
       'http://127.0.0.1:3010',
       '/api/v1/tutoring/bookings',
+      headers,
+    );
+  }
+
+  async listTeacherBookings(teacherId: string, headers: Record<string, string>) {
+    return this.getFromService(
+      'TUTORING_SERVICE_URL',
+      'http://127.0.0.1:3010',
+      `/api/v1/tutoring/sessions/teacher/${teacherId}`,
       headers,
     );
   }
@@ -596,7 +733,7 @@ export class GatewayService {
     const baseUrl = this.getServiceUrl(key, fallback);
     try {
       const response = await firstValueFrom(
-        this.httpService.post(`${baseUrl}${path}`, payload, { headers }),
+        this.httpService.post(`${baseUrl}${path}`, payload, { headers: this.buildHeaders(headers) }),
       );
       return response.data;
     } catch (error) {
@@ -614,7 +751,7 @@ export class GatewayService {
     const baseUrl = this.getServiceUrl(key, fallback);
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${baseUrl}${path}`, { headers, params }),
+        this.httpService.get(`${baseUrl}${path}`, { headers: this.buildHeaders(headers), params }),
       );
       return response.data;
     } catch (error) {
@@ -632,7 +769,25 @@ export class GatewayService {
     const baseUrl = this.getServiceUrl(key, fallback);
     try {
       const response = await firstValueFrom(
-        this.httpService.patch(`${baseUrl}${path}`, payload, { headers }),
+        this.httpService.patch(`${baseUrl}${path}`, payload, { headers: this.buildHeaders(headers) }),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleProxyError(error);
+    }
+  }
+
+  private async putToService(
+    key: string,
+    fallback: string,
+    path: string,
+    payload: Record<string, unknown>,
+    headers: Record<string, string>,
+  ) {
+    const baseUrl = this.getServiceUrl(key, fallback);
+    try {
+      const response = await firstValueFrom(
+        this.httpService.put(`${baseUrl}${path}`, payload, { headers: this.buildHeaders(headers) }),
       );
       return response.data;
     } catch (error) {
@@ -649,11 +804,59 @@ export class GatewayService {
     const baseUrl = this.getServiceUrl(key, fallback);
     try {
       const response = await firstValueFrom(
-        this.httpService.delete(`${baseUrl}${path}`, { headers }),
+        this.httpService.delete(`${baseUrl}${path}`, { headers: this.buildHeaders(headers) }),
       );
       return response.data;
     } catch (error) {
       this.handleProxyError(error);
+    }
+  }
+
+  private buildHeaders(headers: Record<string, string>) {
+    const contentType = headers['content-type'] || headers['Content-Type'] || 'application/json';
+    const authHeader = headers['authorization'] || headers['Authorization'];
+    const { sub, roles } = this.decodeAuthToken(authHeader);
+    const resolvedHeaders: Record<string, string> = {
+      'Content-Type': contentType,
+      ...headers,
+    };
+
+    if (!resolvedHeaders['x-user-id'] && !resolvedHeaders['X-User-Id'] && sub) {
+      resolvedHeaders['x-user-id'] = sub;
+    }
+
+    if (!resolvedHeaders['x-user-roles'] && !resolvedHeaders['X-User-Roles'] && roles.length > 0) {
+      resolvedHeaders['x-user-roles'] = roles.join(',');
+    }
+
+    return resolvedHeaders;
+  }
+
+  private decodeAuthToken(authHeader?: string): { sub?: string; roles: string[] } {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { roles: [] };
+    }
+
+    const token = authHeader.split(' ')[1];
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      return { roles: [] };
+    }
+
+    try {
+      const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+      const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8')) as {
+        sub?: string;
+        roles?: string[];
+      };
+
+      return {
+        sub: payload.sub,
+        roles: Array.isArray(payload.roles) ? payload.roles : [],
+      };
+    } catch {
+      return { roles: [] };
     }
   }
 

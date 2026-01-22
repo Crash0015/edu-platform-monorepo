@@ -103,6 +103,14 @@ export default function AdminEnrollmentsPage() {
     setLookupResult(response || []);
   };
 
+  const handleDropEnrollment = async (enrollmentId: string) => {
+    if (!confirm('¿Eliminar matrícula?')) {
+      return;
+    }
+    await apiFetchAuth(`/gateway/admin/enrollments/${enrollmentId}`, { method: 'DELETE' });
+    loadEnrollments();
+  };
+
   return (
     <DashboardShell title="Administración" requiredRoles={['ADMIN']} navItems={adminNav}>
       <div className="grid gap-6">
@@ -187,7 +195,15 @@ export default function AdminEnrollmentsPage() {
                 {lookupResult.map((enrollment) => (
                   <li key={enrollment.id} className="flex flex-wrap items-center justify-between gap-2">
                     <span>{enrollment.course?.name || enrollment.courseId}</span>
-                    <span className="text-xs text-[var(--ink-muted)]">{enrollment.student?.email || enrollment.studentId}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-[var(--ink-muted)]">{enrollment.student?.email || enrollment.studentId}</span>
+                      <button
+                        className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                        onClick={() => handleDropEnrollment(enrollment.id)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -205,18 +221,19 @@ export default function AdminEnrollmentsPage() {
                   <th className="py-3">Curso</th>
                   <th className="py-3">Estado</th>
                   <th className="py-3">Fecha</th>
+                  <th className="py-3">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="py-4 text-[var(--ink-muted)]">
+                    <td colSpan={5} className="py-4 text-[var(--ink-muted)]">
                       Cargando matrículas...
                     </td>
                   </tr>
                 ) : enrollments.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-4 text-[var(--ink-muted)]">
+                    <td colSpan={5} className="py-4 text-[var(--ink-muted)]">
                       No hay matrículas.
                     </td>
                   </tr>
@@ -230,6 +247,14 @@ export default function AdminEnrollmentsPage() {
                       <td className="py-3">{enrollment.status}</td>
                       <td className="py-3">
                         {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3">
+                        <button
+                          className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                          onClick={() => handleDropEnrollment(enrollment.id)}
+                        >
+                          Eliminar
+                        </button>
                       </td>
                     </tr>
                   ))

@@ -7,9 +7,10 @@ import { studentNav } from '../../../../lib/nav';
 import { useProfile } from '../../../../hooks/useProfile';
 
 type Enrollment = {
-  id: string;
+  id?: string;
+  courseId: string;
   status: string;
-  course: { id: string; code: string; name: string; description: string | null } | null;
+  course: { code: string; name: string; description: string | null } | null;
 };
 
 export default function StudentCoursesPage() {
@@ -36,7 +37,7 @@ export default function StudentCoursesPage() {
             <p className="text-sm text-[var(--ink-muted)]">Aún no tienes cursos inscritos.</p>
           ) : (
             enrollments.map((enrollment) => (
-              <div key={enrollment.id} className="rounded-2xl border border-[var(--border)] px-4 py-3">
+              <div key={enrollment.courseId} className="rounded-2xl border border-[var(--border)] px-4 py-3">
                 <p className="text-sm font-semibold">{enrollment.course?.name || 'Curso'}</p>
                 <p className="text-xs text-[var(--ink-muted)]">
                   {enrollment.course?.code} · {enrollment.status}

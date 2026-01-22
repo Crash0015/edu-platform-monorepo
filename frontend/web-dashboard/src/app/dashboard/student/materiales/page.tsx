@@ -12,12 +12,14 @@ type Material = {
   type: string;
   resourceUrl: string;
   status: string;
+  thumbnailUrl?: string | null;
 };
 
 type Enrollment = {
-  id: string;
+  id?: string;
+  courseId: string;
   status: string;
-  course: { id: string; code: string; name: string } | null;
+  course: { id?: string; code: string; name: string } | null;
 };
 
 export default function StudentMaterialsPage() {
@@ -69,7 +71,11 @@ export default function StudentMaterialsPage() {
             <select
               className="flex-1 rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
               value={courseId}
-              onChange={(event) => setCourseId(event.target.value)}
+              onChange={(event) => {
+                 // Force string update
+                 const val = event.target.value;
+                 setCourseId(val);
+              }}
               required
             >
               <option value="">Selecciona curso</option>
@@ -79,12 +85,12 @@ export default function StudentMaterialsPage() {
                 </option>
               ) : (
                 courses
-                  .filter((enrollment) => enrollment.course)
-                  .map((enrollment) => (
-                    <option key={enrollment.id} value={enrollment.course?.id || ''}>
-                      {enrollment.course?.code} · {enrollment.course?.name}
-                    </option>
-                  ))
+                   .filter((enrollment) => enrollment.courseId)
+                   .map((enrollment) => (
+                     <option key={enrollment.courseId} value={enrollment.courseId}>
+                       {enrollment.course?.code || 'S/C'} · {enrollment.course?.name || 'Sin Nombre'}
+                     </option>
+                   ))
               )}
             </select>
             <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white">
@@ -102,11 +108,24 @@ export default function StudentMaterialsPage() {
             ) : (
               materials.map((material) => (
                 <div key={material.id} className="rounded-2xl border border-[var(--border)] px-4 py-3">
-                  <p className="text-sm font-semibold">{material.title}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">{material.type} · {material.status}</p>
-                  <a className="mt-2 inline-block text-sm text-[var(--primary)] hover:underline" href={material.resourceUrl} target="_blank" rel="noreferrer">
-                    Abrir recurso
-                  </a>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="h-16 w-28 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]">
+                      {material.thumbnailUrl ? (
+                        <img className="h-full w-full object-cover" src={material.thumbnailUrl} alt={material.title} />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-[var(--ink-muted)]">
+                          {material.type === 'PDF' ? 'PDF' : 'Material'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold">{material.title}</p>
+                      <p className="text-xs text-[var(--ink-muted)]">{material.type} · {material.status}</p>
+                      <a className="mt-2 inline-block text-sm text-[var(--primary)] hover:underline" href={material.resourceUrl} target="_blank" rel="noreferrer">
+                        Abrir recurso
+                      </a>
+                    </div>
+                  </div>
                 </div>
               ))
             )}

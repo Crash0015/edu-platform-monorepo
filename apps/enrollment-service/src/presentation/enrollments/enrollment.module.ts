@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EnrollmentController } from './enrollment.controller';
 import { EnrollmentService } from '../../application/enrollments/enrollment.service';
+import { EnrollmentQueryService } from '../../application/enrollments/queries/enrollment.query.service';
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { KafkaModule } from '../../infrastructure/kafka/kafka.module';
 import { ENROLLMENT_REPOSITORY } from '../../application/enrollments/enrollment.service';
@@ -10,6 +11,7 @@ import { PrismaEnrollmentRepository } from '../../infrastructure/prisma/enrollme
   controllers: [EnrollmentController],
   providers: [
     EnrollmentService,
+    EnrollmentQueryService,
     {
       provide: ENROLLMENT_REPOSITORY,
       useClass: PrismaEnrollmentRepository,

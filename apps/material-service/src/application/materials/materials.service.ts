@@ -53,6 +53,13 @@ export class MaterialsService {
       status: 'DRAFT',
     });
 
+    if (input.type === 'VIDEO' && !payload.thumbnailUrl) {
+      const generated = this.tryGenerateVideoThumbnail(input.resourceUrl);
+      if (generated) {
+        payload.thumbnailUrl = generated;
+      }
+    }
+
     return this.materialsClient.createMaterial(payload);
   }
 
@@ -83,7 +90,15 @@ export class MaterialsService {
   ) {
     this.ensureWriteAccess(context);
 
-    const updated = await this.materialsClient.updateMaterial(id, input);
+    const payload = { ...input } as Record<string, unknown> & { thumbnailUrl?: string | null; resourceUrl?: string };
+    if (input.type === 'VIDEO' && !input.thumbnailUrl && input.resourceUrl) {
+      const generated = this.tryGenerateVideoThumbnail(input.resourceUrl);
+      if (generated) {
+        payload.thumbnailUrl = generated;
+      }
+    }
+
+    const updated = await this.materialsClient.updateMaterial(id, payload);
     if (!updated) {
       throw new NotFoundException('Material not found');
     }
@@ -126,9 +141,41 @@ export class MaterialsService {
     return material;
   }
 
+  async uploadAsset(
+    file: { buffer: Buffer; filename: string; mimetype: string },
+    context: RequestContext,
+  ): Promise<{ url: string }> {
+    this.ensureWriteAccess(context);
+    const url = await this.materialsClient.uploadAsset(file);
+    return { url };
+  }
+
   private ensureWriteAccess(context: RequestContext) {
     if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
       throw new UnauthorizedException('Teacher or Admin role required');
     }
+  }
+
+  private tryGenerateVideoThumbnail(resourceUrl: string): string | null {
+    if (!resourceUrl) {
+      return null;
+    }
+    try {
+      const url = new URL(resourceUrl);
+      if (url.hostname.includes('youtube.com')) {
+        const id = url.searchParams.get('v');
+        return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+      }
+      if (url.hostname.includes('youtu.be')) {
+        const id = url.pathname.replace('/', '');
+        return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+      }
+      if (url.hostname.includes('vimeo.com')) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+    return null;
   }
 }

@@ -87,7 +87,7 @@ export class AuthService {
     if (!isInstitutionalEmail(normalizedEmail)) {
       throw new BadRequestException({
         message: 'Validation failed',
-        details: ['email must end with @uce.edu.ec'],
+        details: ['email is invalid'],
       });
     }
 
@@ -143,7 +143,7 @@ export class AuthService {
     if (!isInstitutionalEmail(normalizedEmail)) {
       throw new BadRequestException({
         message: 'Validation failed',
-        details: ['email must end with @uce.edu.ec'],
+        details: ['email is invalid'],
       });
     }
 
@@ -273,7 +273,7 @@ export class AuthService {
     if (!isInstitutionalEmail(normalizedEmail)) {
       throw new BadRequestException({
         message: 'Validation failed',
-        details: ['email must end with @uce.edu.ec'],
+        details: ['email is invalid'],
       });
     }
 

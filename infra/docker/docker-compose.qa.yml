@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  postgres:
+    ports: []
+  postgres-enrollment:
+    ports: []
+  postgres-course:
+    ports: []
+  postgres-schedule:
+    ports: []
+  postgres-tutoring:
+    ports: []
+  mongo:
+    ports: []
+  redis:
+    ports: []
+  zookeeper:
+    ports: []
+  kafka:
+    ports: []
+  auth-service:
+    ports: []
+  user-service:
+    ports: []
+  course-service:
+    ports: []
+  enrollment-service:
+    ports: []
+  schedule-service:
+    ports: []
+  tutoring-service:
+    ports: []
+  search-service:
+    ports: []
+  material-service:
+    ports: []
+  notification-service:
+    ports: []
+  automation-service:
+    ports: []
+  rabbitmq:
+    ports: []
+  mailhog:
+    ports: []
+  mqtt:
+    ports: []

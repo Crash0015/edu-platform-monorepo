@@ -1,9 +1,9 @@
-import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { KafkaService } from '../../infrastructure/kafka/kafka.service';
 import { EVENT_TYPES } from '../../shared/constants/events.constants';
 import { buildEventEnvelope } from './event.factory';
-import { EnrollmentRepository } from './ports/enrollment.repository';
+import { EnrollmentRecord, EnrollmentRepository } from './ports/enrollment.repository';
 
 export const ENROLLMENT_REPOSITORY = Symbol('ENROLLMENT_REPOSITORY');
 
@@ -96,28 +96,40 @@ export class EnrollmentService {
     return enrollment;
   }
 
-  async getAllEnrollments(context: { actorUserId: string | null; actorRoles: string[] }) {
-    if (!context.actorUserId || !context.actorRoles.includes('ADMIN')) {
-      throw new UnauthorizedException('Admin role required');
+  async assignEnrollmentWithProfile(input: {
+    email: string;
+    fullName: string;
+    identificationNumber?: string;
+    courseId: string;
+    correlationId: string;
+    actorUserId: string | null;
+    actorRoles: string[];
+  }) {
+    const teacherId = input.actorUserId;
+    if (!teacherId || (!input.actorRoles.includes('TEACHER') && !input.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin context is required');
     }
 
-    const enrollments = await this.enrollmentRepository.getAllEnrollments();
-    const enriched = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        const [student, course] = await Promise.all([
-          this.fetchUser(enrollment.studentId),
-          this.fetchCourse(enrollment.courseId),
-        ]);
-        return {
-          ...enrollment,
-          student,
-          course,
-        };
-      }),
-    );
+    if (!input.email || !input.fullName || !input.courseId) {
+      throw new BadRequestException('email, fullName and courseId are required');
+    }
 
-    return enriched;
+    const student = await this.ensureStudentProfile({
+      email: input.email,
+      fullName: input.fullName,
+      identificationNumber: input.identificationNumber,
+      correlationId: input.correlationId,
+    });
+
+    return this.assignEnrollment({
+      studentId: student.id,
+      courseId: input.courseId,
+      correlationId: input.correlationId,
+      actorUserId: input.actorUserId,
+      actorRoles: input.actorRoles,
+    });
   }
+
 
   private async reserveCourseSeat(courseId: string, actorUserId: string | null, actorRoles: string[]) {
     await this.updateCourseSeats(courseId, 'increment', actorUserId, actorRoles);
@@ -151,6 +163,9 @@ export class EnrollmentService {
   private async fetchUser(userId: string): Promise<UserSummary | null> {
     const baseUrl = this.configService.get<string>('USER_SERVICE_URL', 'http://user-service:3008');
     try {
+      if (typeof fetch === 'undefined') {
+        return null;
+      }
       const response = await fetch(`${baseUrl}/api/v1/users/${userId}`);
       if (!response.ok) {
         return null;
@@ -164,6 +179,9 @@ export class EnrollmentService {
   private async fetchCourse(courseId: string): Promise<CourseSummary | null> {
     const baseUrl = this.configService.get<string>('COURSE_SERVICE_URL', 'http://course-service:3004');
     try {
+      if (typeof fetch === 'undefined') {
+        return null;
+      }
       const response = await fetch(`${baseUrl}/api/v1/courses/${courseId}`);
       if (!response.ok) {
         return null;
@@ -174,16 +192,10 @@ export class EnrollmentService {
     }
   }
 
-  async getEnrollmentsByStudent(studentId: string, context: { actorUserId: string | null; actorRoles: string[] }) {
-    // Allow if requesting own enrollments or if teacher/admin
-    if (context.actorUserId !== studentId && !context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN')) {
-      throw new UnauthorizedException('Not authorized to view these enrollments');
-    }
 
-    const enrollments = await this.enrollmentRepository.getEnrollmentsByStudent(studentId);
-    
-    // Fetch course details for each enrollment
-    const enrollmentsWithCourses = await Promise.all(
+
+  async buildEnrollmentCourseView(enrollments: EnrollmentRecord[]) {
+    return Promise.all(
       enrollments.map(async (enrollment) => {
         const course = await this.fetchCourse(enrollment.courseId);
         return {
@@ -192,20 +204,10 @@ export class EnrollmentService {
         };
       }),
     );
-
-    return enrollmentsWithCourses;
   }
 
-  async getEnrollmentsByCourse(courseId: string, context: { actorUserId: string | null; actorRoles: string[] }) {
-    // Only teachers and admins can view enrollments for a course
-    if (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN')) {
-      throw new UnauthorizedException('Teacher or Admin role required');
-    }
-
-    const enrollments = await this.enrollmentRepository.getEnrollmentsByCourse(courseId);
-    
-    // Fetch student details for each enrollment
-    const enrollmentsWithStudents = await Promise.all(
+  async buildEnrollmentStudentView(enrollments: EnrollmentRecord[]) {
+    return Promise.all(
       enrollments.map(async (enrollment) => {
         const student = await this.fetchUser(enrollment.studentId);
         return {
@@ -214,8 +216,117 @@ export class EnrollmentService {
         };
       }),
     );
+  }
 
-    return enrollmentsWithStudents;
+  async buildEnrollmentAdminView(enrollments: EnrollmentRecord[]) {
+    return Promise.all(
+      enrollments.map(async (enrollment) => {
+        const [student, course] = await Promise.all([
+          this.fetchUser(enrollment.studentId),
+          this.fetchCourse(enrollment.courseId),
+        ]);
+        return {
+          ...enrollment,
+          student,
+          course,
+        };
+      }),
+    );
+  }
+
+  async dropEnrollment(enrollmentId: string, context: { actorUserId: string | null; actorRoles: string[] }) {
+    if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+
+    const existing = await this.enrollmentRepository.getEnrollmentById(enrollmentId);
+    if (!existing || existing.status !== 'ACTIVE') {
+      throw new NotFoundException('Enrollment not found');
+    }
+
+    await this.releaseCourseSeat(existing.courseId, context.actorUserId, context.actorRoles);
+    const updated = await this.enrollmentRepository.dropEnrollment(enrollmentId);
+    if (!updated) {
+      throw new NotFoundException('Enrollment not found');
+    }
+    return updated;
+  }
+
+  private async ensureStudentProfile(input: {
+    email: string;
+    fullName: string;
+    identificationNumber?: string;
+    correlationId: string;
+  }): Promise<UserSummary> {
+    const normalizedEmail = input.email.toLowerCase();
+    if (!normalizedEmail.includes('@')) {
+      throw new BadRequestException('email is invalid');
+    }
+    if (!input.fullName.trim()) {
+      throw new BadRequestException('fullName is required');
+    }
+
+    if (typeof fetch === 'undefined') {
+      throw new BadRequestException('Fetch is not available for user provisioning');
+    }
+
+    const baseUrl = this.configService.get<string>('AUTH_SERVICE_URL', 'http://auth-service:3001');
+    const internalKey = this.configService.get<string>('AUTH_SERVICE_INTERNAL_KEY', '').trim();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (internalKey) {
+      headers['x-internal-key'] = internalKey;
+    }
+
+    const response = await fetch(`${baseUrl}/api/v1/internal/users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        email: normalizedEmail,
+        fullName: input.fullName,
+        identificationNumber: input.identificationNumber,
+        userType: 'STUDENT',
+        status: 'ACTIVE',
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      if (response.status !== 409 && response.status !== 400) {
+        throw new BadRequestException(payload?.message || 'Failed to create student profile');
+      }
+    } else {
+      const payload = (await response.json()) as { user?: UserSummary } | UserSummary;
+      const created = payload && 'user' in payload && payload.user ? payload.user : (payload as UserSummary);
+      if (created?.id) {
+        return created;
+      }
+    }
+
+    const existing = await this.fetchUserByEmail(normalizedEmail, headers, baseUrl);
+    if (!existing) {
+      throw new BadRequestException('Failed to resolve existing student profile');
+    }
+    if (existing.userType !== 'STUDENT') {
+      throw new BadRequestException('Account already exists and is not a student');
+    }
+    if (existing.status !== 'ACTIVE') {
+      throw new BadRequestException('Student account is not active');
+    }
+    return existing;
+  }
+
+  private async fetchUserByEmail(
+    email: string,
+    headers: Record<string, string>,
+    baseUrl: string,
+  ): Promise<UserSummary | null> {
+    const response = await fetch(`${baseUrl}/api/v1/internal/users/email/${encodeURIComponent(email)}`, {
+      headers,
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as UserSummary;
   }
 }
 

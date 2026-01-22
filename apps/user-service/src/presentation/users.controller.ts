@@ -11,8 +11,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user profile summary' })
   @ApiOkResponse({ schema: { example: { id: 'uuid', status: 'ACTIVE', userType: 'STUDENT' } } })
   @ApiNotFoundResponse({ description: 'User not found' })
-  getUser(@Param('id') id: string) {
-    const user = this.usersService.getUser(id);
+  async getUser(@Param('id') id: string) {
+    const user = await this.usersService.getUser(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }

@@ -210,6 +210,20 @@ export class TutoringService {
     return this.tutoringRepository.listSessions();
   }
 
+  async listTeacherBookings(
+    teacherId: string,
+    context: RequestContext,
+  ): Promise<Array<{ session: TutoringSessionRecord; booking: BookingRecord | null }>> {
+    if (!context.actorUserId || (!context.actorRoles.includes('TEACHER') && !context.actorRoles.includes('ADMIN'))) {
+      throw new UnauthorizedException('Teacher or Admin role required');
+    }
+    if (context.actorRoles.includes('TEACHER') && context.actorUserId !== teacherId) {
+      throw new UnauthorizedException('Teachers can only access their own sessions');
+    }
+
+    return this.tutoringRepository.listSessionsByTeacher(teacherId, 'RESERVED');
+  }
+
   async listBookings(context: RequestContext): Promise<BookingRecord[]> {
     if (!context.actorUserId || !context.actorRoles.includes('ADMIN')) {
       throw new UnauthorizedException('Admin role required');

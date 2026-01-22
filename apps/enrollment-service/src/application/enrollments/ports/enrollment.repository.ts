@@ -15,4 +15,5 @@ export interface EnrollmentRepository {
   getEnrollmentsByStudent(studentId: string): Promise<EnrollmentRecord[]>;
   getEnrollmentsByCourse(courseId: string): Promise<EnrollmentRecord[]>;
   getEnrollmentById(enrollmentId: string): Promise<EnrollmentRecord | null>;
+  dropEnrollment(enrollmentId: string): Promise<EnrollmentRecord | null>;
 }

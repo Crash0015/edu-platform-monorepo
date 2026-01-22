@@ -50,7 +50,7 @@ export class AuthController {
       example: {
         error: 'BadRequest',
         message: 'Validation failed',
-        details: ['email must end with @uce.edu.ec'],
+        details: ['email is invalid'],
         correlationId: 'uuid',
       },
     },

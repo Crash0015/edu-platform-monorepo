@@ -10,15 +10,15 @@ type AvailableSession = {
   id: string;
   teacherId: string;
   courseId: string | null;
-  availabilitySlotId: string;
   startTime: string;
   endTime: string;
 };
 
 type Enrollment = {
-  id: string;
+  id?: string;
+  courseId: string;
   status: string;
-  course: { id: string; code: string; name: string } | null;
+  course: { id?: string; code: string; name: string } | null;
 };
 
 type TeacherCourse = {
@@ -56,6 +56,13 @@ export default function StudentTutoringPage() {
   const [cancelBookingId, setCancelBookingId] = useState('');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+
+  const sessionLabel = (session: AvailableSession) => {
+    const start = new Date(session.startTime).toLocaleString();
+    const end = new Date(session.endTime).toLocaleString();
+    const courseLabel = session.courseId ? `Curso ${session.courseId}` : 'General';
+    return `${start} - ${end} · ${courseLabel}`;
+  };
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -172,7 +179,8 @@ export default function StudentTutoringPage() {
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
               value={courseId}
               onChange={(event) => {
-                setCourseId(event.target.value);
+                const val = event.target.value;
+                setCourseId(val);
                 setTeacherId('');
                 setSessions([]);
               }}
@@ -183,13 +191,13 @@ export default function StudentTutoringPage() {
                   Cargando cursos...
                 </option>
               ) : (
-                courses
-                  .filter((enrollment) => enrollment.course)
-                  .map((enrollment) => (
-                    <option key={enrollment.id} value={enrollment.course?.id || ''}>
-                      {enrollment.course?.code} · {enrollment.course?.name}
-                    </option>
-                  ))
+                 courses
+                   .filter((enrollment) => enrollment.courseId)
+                   .map((enrollment) => (
+                     <option key={enrollment.courseId} value={enrollment.courseId}>
+                       {enrollment.course?.code || 'S/C'} · {enrollment.course?.name || 'Sin Nombre'}
+                     </option>
+                   ))
               )}
             </select>
             <select
@@ -217,7 +225,7 @@ export default function StudentTutoringPage() {
               sessions.map((session) => (
                 <div key={session.id} className="rounded-2xl border border-[var(--border)] px-4 py-3">
                   <p className="text-sm font-semibold">{new Date(session.startTime).toLocaleString()} - {new Date(session.endTime).toLocaleString()}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">Slot: {session.availabilitySlotId} · Curso: {session.courseId || 'General'}</p>
+                  <p className="text-xs text-[var(--ink-muted)]">Slot: {session.id} · Curso: {session.courseId || 'General'}</p>
                 </div>
               ))
             )}
@@ -227,13 +235,22 @@ export default function StudentTutoringPage() {
         <section className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Reservar tutoría</h2>
           <form onSubmit={handleReserve} className="mt-4 grid gap-4 md:grid-cols-2">
-            <input
+            <select
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
-              placeholder="Availability Slot ID"
               value={reserveData.availabilitySlotId}
               onChange={(event) => setReserveData({ ...reserveData, availabilitySlotId: event.target.value })}
               required
-            />
+              disabled={sessions.length === 0}
+            >
+              <option value="">
+                {sessions.length === 0 ? 'Primero busca tutorias disponibles' : 'Selecciona un horario'}
+              </option>
+              {sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {sessionLabel(session)}
+                </option>
+              ))}
+            </select>
             <select
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
               value={courseId}
@@ -250,13 +267,13 @@ export default function StudentTutoringPage() {
                   Cargando cursos...
                 </option>
               ) : (
-                courses
-                  .filter((enrollment) => enrollment.course)
-                  .map((enrollment) => (
-                    <option key={enrollment.id} value={enrollment.course?.id || ''}>
-                      {enrollment.course?.code} · {enrollment.course?.name}
-                    </option>
-                  ))
+                 courses
+                   .filter((enrollment) => enrollment.courseId)
+                   .map((enrollment) => (
+                     <option key={enrollment.courseId} value={enrollment.courseId}>
+                       {enrollment.course?.code || 'S/C'} · {enrollment.course?.name || 'Sin Nombre'}
+                     </option>
+                   ))
               )}
             </select>
             <select

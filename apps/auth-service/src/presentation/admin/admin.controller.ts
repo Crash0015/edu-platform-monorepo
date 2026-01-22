@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
@@ -19,6 +19,7 @@ import {
   AdminUserResponseDto,
   AdminUsersReportDto,
   CreateAdminUserDto,
+  UpdateUserProfileDto,
   UpdateUserStatusDto,
   UpdateUserTypeDto,
 } from './dto/admin.dto';
@@ -48,6 +49,7 @@ export class AdminController {
      return {
        user: result.user,
        temporaryPassword: result.temporaryPassword,
+       resetLink: result.resetLink,
      };
    }
 
@@ -81,12 +83,31 @@ export class AdminController {
     return this.adminService.updateUserType(id, body.userType);
   }
 
+  @Patch('users/:id')
+  @ApiOperation({ summary: 'Update user profile (Admin only)' })
+  @ApiOkResponse({ type: AdminUserResponseDto })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  async updateUserProfile(
+    @Param('id') id: string,
+    @Body() body: UpdateUserProfileDto,
+  ): Promise<AdminUserResponseDto> {
+    return this.adminService.updateUserProfile(id, body);
+  }
+
   @Post('users/:id/mfa/reset')
   @ApiOperation({ summary: 'Disable MFA for a user (Admin only)' })
   @ApiOkResponse({ type: AdminMessageResponseDto })
   @ApiNotFoundResponse({ description: 'User not found' })
   async resetMfa(@Param('id') id: string): Promise<AdminMessageResponseDto> {
     const message = await this.adminService.resetUserMfa(id);
+    return { message };
+  }
+
+  @Delete('users/:id')
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
+  @ApiOkResponse({ type: AdminMessageResponseDto })
+  async deleteUser(@Param('id') id: string): Promise<AdminMessageResponseDto> {
+    const message = await this.adminService.deleteUser(id);
     return { message };
   }
 

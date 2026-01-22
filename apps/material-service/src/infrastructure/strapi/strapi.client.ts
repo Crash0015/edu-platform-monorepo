@@ -18,6 +18,11 @@ type StrapiListResponse<T> = {
   data: Array<StrapiEntity<T>>;
 };
 
+type StrapiUploadResponse = Array<{
+  id: number;
+  url: string;
+}>;
+
 type StrapiMaterialAttributes = {
   title: string;
   description?: string | null;
@@ -80,6 +85,40 @@ export class StrapiClient implements MaterialsClient {
 
   async deleteMaterial(id: string): Promise<void> {
     await this.delete(`/materials/${id}`);
+  }
+
+  async uploadAsset(file: { buffer: Buffer; filename: string; mimetype: string }): Promise<string> {
+    const baseUrl = this.config.strapiUrl;
+    const boundary = `----edu-platform-${Date.now()}`;
+    const payloadParts: Array<Buffer | string> = [
+      `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="files"; filename="${file.filename}"\r\n` +
+        `Content-Type: ${file.mimetype}\r\n\r\n`,
+      file.buffer,
+      `\r\n--${boundary}--\r\n`,
+    ];
+    const body = Buffer.concat(payloadParts.map((part) => (typeof part === 'string' ? Buffer.from(part) : part)));
+
+    const response = await firstValueFrom(
+      this.httpService.post(`${baseUrl}/api/upload`, body, {
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length,
+        },
+      }),
+    );
+
+    const payload = response.data as StrapiUploadResponse;
+    if (!Array.isArray(payload) || payload.length === 0 || !payload[0]?.url) {
+      throw new Error('Strapi did not return an uploaded asset');
+    }
+
+    const url = payload[0].url;
+    if (url.startsWith('http')) {
+      return url;
+    }
+    return `${baseUrl}${url}`;
   }
 
   private mapRecord(item: StrapiEntity<StrapiMaterialAttributes>): MaterialRecord {

@@ -1,12 +1,14 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import DashboardShell from '../../../../components/DashboardShell';
 import { apiFetchAuth } from '../../../../lib/api';
 import { adminNav } from '../../../../lib/nav';
 
 type AdminUser = {
   id: string;
+  fullName?: string | null;
+  identificationNumber?: string | null;
   email: string;
   status: 'ACTIVE' | 'SUSPENDED';
   userType: 'STUDENT' | 'TEACHER' | 'ADMIN';
@@ -30,10 +32,20 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ email: '', status: '', userType: '' });
+  const [filters, setFilters] = useState({ email: '', status: '', userType: '', search: '' });
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ email: '', fullName: '', userType: 'STUDENT', status: 'ACTIVE' });
-  const [createdInfo, setCreatedInfo] = useState<{ pass?: string; link?: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [formData, setFormData] = useState({
+    email: '',
+    fullName: '',
+    identificationNumber: '',
+    userType: 'STUDENT',
+    status: 'ACTIVE',
+  });
+  const [createdInfo, setCreatedInfo] = useState<{ pass?: string; link?: string; email?: string } | null>(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -41,8 +53,11 @@ export default function AdminUsersPage() {
     try {
       const params = new URLSearchParams();
       if (filters.email) params.set('email', filters.email);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (filters.status) params.set('status', filters.status);
       if (filters.userType) params.set('userType', filters.userType);
+      params.set('offset', String((page - 1) * pageSize));
+      params.set('limit', String(pageSize));
       const response = await apiFetchAuth<AdminUserList>(`/gateway/admin/users?${params.toString()}`);
       setUsers(response.items || []);
     } catch (err) {
@@ -55,10 +70,19 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [page, debouncedSearch]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(filters.search.trim());
+      setPage(1);
+    }, 450);
+    return () => clearTimeout(timeout);
+  }, [filters.search]);
 
   const handleFilter = (event: FormEvent) => {
     event.preventDefault();
+    setPage(1);
     loadUsers();
   };
 
@@ -66,21 +90,37 @@ export default function AdminUsersPage() {
     event.preventDefault();
     setError('');
     try {
-      const response = await apiFetchAuth<CreateUserResponse>('/gateway/admin/users', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: formData.email,
-          fullName: formData.fullName,
-          userType: formData.userType,
-          status: formData.status,
-        }),
-      });
-      setCreatedInfo({ pass: response.temporaryPassword, link: response.resetLink });
-      setShowForm(false);
-      setFormData({ email: '', fullName: '', userType: 'STUDENT', status: 'ACTIVE' });
-      loadUsers();
+      if (editingUser) {
+        await apiFetchAuth(`/gateway/admin/users/${editingUser.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            email: formData.email,
+            fullName: formData.fullName,
+            identificationNumber: formData.identificationNumber || undefined,
+          }),
+        });
+        setShowForm(false);
+        setEditingUser(null);
+        setFormData({ email: '', fullName: '', identificationNumber: '', userType: 'STUDENT', status: 'ACTIVE' });
+        loadUsers();
+      } else {
+        const response = await apiFetchAuth<CreateUserResponse>('/gateway/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: formData.email,
+            fullName: formData.fullName,
+            identificationNumber: formData.identificationNumber || undefined,
+            userType: formData.userType,
+            status: formData.status,
+          }),
+        });
+        setCreatedInfo({ pass: response.temporaryPassword, link: response.resetLink, email: response.user.email });
+        setShowForm(false);
+        setFormData({ email: '', fullName: '', identificationNumber: '', userType: 'STUDENT', status: 'ACTIVE' });
+        loadUsers();
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo crear el usuario.';
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el usuario.';
       setError(message);
     }
   };
@@ -106,6 +146,30 @@ export default function AdminUsersPage() {
     loadUsers();
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Eliminar usuario? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    const confirmEmail = prompt('Escribe ELIMINAR para confirmar:');
+    if (confirmEmail !== 'ELIMINAR') {
+      return;
+    }
+    await apiFetchAuth(`/gateway/admin/users/${id}`, { method: 'DELETE' });
+    loadUsers();
+  };
+
+  const handleEdit = (user: AdminUser) => {
+    setEditingUser(user);
+    setShowForm(true);
+    setFormData({
+      email: user.email,
+      fullName: user.fullName || '',
+      identificationNumber: user.identificationNumber || '',
+      userType: user.userType,
+      status: user.status,
+    });
+  };
+
   return (
     <DashboardShell title="Administración" requiredRoles={['ADMIN']} navItems={adminNav}>
       <div className="grid gap-6">
@@ -119,18 +183,26 @@ export default function AdminUsersPage() {
               className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white"
               onClick={() => {
                 setShowForm(true);
+                setEditingUser(null);
                 setCreatedInfo(null);
+                setFormData({ email: '', fullName: '', identificationNumber: '', userType: 'STUDENT', status: 'ACTIVE' });
               }}
             >
               Crear usuario
             </button>
           </div>
-          <form onSubmit={handleFilter} className="mt-6 grid gap-3 md:grid-cols-[1.3fr_0.7fr_0.7fr_auto]">
+          <form onSubmit={handleFilter} className="mt-6 grid gap-3 md:grid-cols-[1.3fr_0.9fr_0.7fr_0.7fr_auto]">
             <input
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
               placeholder="Buscar por email"
               value={filters.email}
               onChange={(event) => setFilters({ ...filters, email: event.target.value })}
+            />
+            <input
+              className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
+              placeholder="Buscar por nombre"
+              value={filters.search}
+              onChange={(event) => setFilters({ ...filters, search: event.target.value })}
             />
             <select
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
@@ -156,26 +228,26 @@ export default function AdminUsersPage() {
             </button>
           </form>
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-          {createdInfo?.pass && (
+          {createdInfo?.link ? (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <strong>Usuario creado.</strong> Se envio un enlace de acceso a {createdInfo.email}.
+              <p className="mt-1 text-xs opacity-80">Si no llega el correo, usa este enlace: <a className="underline" href={createdInfo.link} target="_blank" rel="noreferrer">{createdInfo.link}</a></p>
+            </div>
+          ) : createdInfo?.pass ? (
             <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
               <strong>¡Usuario creado!</strong> Contraseña temporal: <code className="bg-white px-2 py-1 rounded border">{createdInfo.pass}</code>
               <p className="mt-1 text-xs opacity-80">Comparte esta contraseña con el usuario. Él/ella podrá cambiarla después.</p>
             </div>
-          )}
-          {createdInfo?.link && (
-            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              Enlace de reset: <a className="underline" href={createdInfo.link} target="_blank" rel="noreferrer">{createdInfo.link}</a>
-            </div>
-          )}
+          ) : null}
         </section>
 
         {showForm && (
           <section className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold">Crear usuario</h3>
+            <h3 className="text-lg font-semibold">{editingUser ? 'Editar usuario' : 'Crear usuario'}</h3>
             <form onSubmit={handleCreate} className="mt-4 grid gap-4 md:grid-cols-2">
-              <input
-                className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
-                placeholder="Email @uce.edu.ec"
+                <input
+                  className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
+                  placeholder="Email"
                 value={formData.email}
                 onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 required
@@ -187,31 +259,45 @@ export default function AdminUsersPage() {
                 onChange={(event) => setFormData({ ...formData, fullName: event.target.value })}
                 required
               />
-              <select
+              <input
                 className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
-                value={formData.userType}
-                onChange={(event) => setFormData({ ...formData, userType: event.target.value })}
-              >
-                <option value="STUDENT">Estudiante</option>
-                <option value="TEACHER">Docente</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-              <select
-                className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
-                value={formData.status}
-                onChange={(event) => setFormData({ ...formData, status: event.target.value })}
-              >
-                <option value="ACTIVE">Activo</option>
-                <option value="SUSPENDED">Suspendido</option>
-              </select>
+                placeholder="Cedula (opcional)"
+                value={formData.identificationNumber}
+                onChange={(event) => setFormData({ ...formData, identificationNumber: event.target.value })}
+              />
+              {!editingUser && (
+                <>
+                  <select
+                    className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
+                    value={formData.userType}
+                    onChange={(event) => setFormData({ ...formData, userType: event.target.value })}
+                  >
+                    <option value="STUDENT">Estudiante</option>
+                    <option value="TEACHER">Docente</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                  <select
+                    className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
+                    value={formData.status}
+                    onChange={(event) => setFormData({ ...formData, status: event.target.value })}
+                  >
+                    <option value="ACTIVE">Activo</option>
+                    <option value="SUSPENDED">Suspendido</option>
+                  </select>
+                </>
+              )}
               <div className="flex gap-3 md:col-span-2">
                 <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white" type="submit">
-                  Crear
+                  {editingUser ? 'Actualizar usuario' : 'Crear usuario'}
                 </button>
                 <button
                   className="rounded-full border border-[var(--border)] px-5 py-2 text-sm font-semibold"
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingUser(null);
+                    setFormData({ email: '', fullName: '', identificationNumber: '', userType: 'STUDENT', status: 'ACTIVE' });
+                  }}
                 >
                   Cancelar
                 </button>
@@ -225,12 +311,12 @@ export default function AdminUsersPage() {
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase text-[var(--ink-muted)]">
                 <tr>
-                  <th className="py-3">Email</th>
-                  <th className="py-3">Rol</th>
-                  <th className="py-3">Estado</th>
-                  <th className="py-3">MFA</th>
-                  <th className="py-3">Acciones</th>
-                </tr>
+                    <th className="py-3">Usuario</th>
+                    <th className="py-3">Rol</th>
+                    <th className="py-3">Estado</th>
+                    <th className="py-3">MFA</th>
+                    <th className="py-3">Acciones</th>
+                  </tr>
               </thead>
               <tbody>
                 {loading ? (
@@ -249,7 +335,10 @@ export default function AdminUsersPage() {
                   users.map((user) => (
                     <tr key={user.id} className="border-t border-[var(--border)]">
                       <td className="py-3">
-                        <div className="font-semibold text-[var(--ink)]">{user.email}</div>
+                        <div className="font-semibold text-[var(--ink)]">{user.fullName || user.email}</div>
+                        <div className="text-xs text-[var(--ink-muted)]">
+                          {user.email} · {user.identificationNumber || 'Sin cedula'}
+                        </div>
                         <div className="text-xs text-[var(--ink-muted)]">{new Date(user.createdAt).toLocaleDateString()}</div>
                       </td>
                       <td className="py-3">
@@ -293,6 +382,18 @@ export default function AdminUsersPage() {
                           >
                             Reset MFA
                           </button>
+                          <button
+                            className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                            onClick={() => handleEdit(user)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                            onClick={() => handleDelete(user.id)}
+                          >
+                            Eliminar
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -300,6 +401,23 @@ export default function AdminUsersPage() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 flex items-center justify-between text-sm">
+            <button
+              className="rounded-full border border-[var(--border)] px-4 py-2 font-semibold"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </button>
+            <span className="text-[var(--ink-muted)]">Página {page}</span>
+            <button
+              className="rounded-full border border-[var(--border)] px-4 py-2 font-semibold"
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={users.length < pageSize}
+            >
+              Siguiente
+            </button>
           </div>
         </section>
       </div>

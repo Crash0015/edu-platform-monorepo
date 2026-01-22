@@ -4,6 +4,7 @@ import { CourseService, COURSE_REPOSITORY } from '../../application/courses/cour
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { KafkaModule } from '../../infrastructure/kafka/kafka.module';
 import { PrismaCourseRepository } from '../../infrastructure/prisma/course.repository';
+import { CoursesResolver } from '../graphql/courses.resolver';
 
 @Module({
   imports: [PrismaModule, KafkaModule],
@@ -14,6 +15,7 @@ import { PrismaCourseRepository } from '../../infrastructure/prisma/course.repos
       provide: COURSE_REPOSITORY,
       useClass: PrismaCourseRepository,
     },
+    CoursesResolver,
   ],
   exports: [CourseService],
 })

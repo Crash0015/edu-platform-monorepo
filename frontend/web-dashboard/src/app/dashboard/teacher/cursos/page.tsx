@@ -22,6 +22,7 @@ export default function TeacherCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({ code: '', name: '', description: '', capacity: 30 });
+  const [editing, setEditing] = useState<Course | null>(null);
 
   const loadCourses = async () => {
     if (!profile?.id) {
@@ -50,20 +51,33 @@ export default function TeacherCoursesPage() {
       return;
     }
     try {
-      const course = await apiFetchAuth<Course>('/gateway/courses', {
-        method: 'POST',
-        body: JSON.stringify({
-          code: formData.code,
-          name: formData.name,
-          description: formData.description || undefined,
-          capacity: Number(formData.capacity),
-        }),
-      });
-      await apiFetchAuth('/gateway/courses/teachers/assign', {
-        method: 'POST',
-        body: JSON.stringify({ courseId: course.id, teacherId: profile.id, roleInCourse: 'OWNER' }),
-      });
+      if (editing) {
+        await apiFetchAuth(`/gateway/courses/${editing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: formData.name,
+            description: formData.description || undefined,
+            capacity: Number(formData.capacity),
+            status: editing.status,
+          }),
+        });
+      } else {
+        const course = await apiFetchAuth<Course>('/gateway/courses', {
+          method: 'POST',
+          body: JSON.stringify({
+            code: formData.code,
+            name: formData.name,
+            description: formData.description || undefined,
+            capacity: Number(formData.capacity),
+          }),
+        });
+        await apiFetchAuth('/gateway/courses/teachers/assign', {
+          method: 'POST',
+          body: JSON.stringify({ courseId: course.id, teacherId: profile.id, roleInCourse: 'OWNER' }),
+        });
+      }
       setFormData({ code: '', name: '', description: '', capacity: 30 });
+      setEditing(null);
       loadCourses();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo crear el curso.';
@@ -71,11 +85,29 @@ export default function TeacherCoursesPage() {
     }
   };
 
+  const handleEdit = (course: Course) => {
+    setEditing(course);
+    setFormData({
+      code: course.code,
+      name: course.name,
+      description: course.description || '',
+      capacity: course.capacity,
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Eliminar curso?')) {
+      return;
+    }
+    await apiFetchAuth(`/gateway/courses/${id}`, { method: 'DELETE' });
+    loadCourses();
+  };
+
   return (
     <DashboardShell title="Docente" requiredRoles={['TEACHER']} navItems={teacherNav}>
       <div className="grid gap-6">
         <section className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Crear curso</h2>
+          <h2 className="text-xl font-semibold">{editing ? 'Editar curso' : 'Crear curso'}</h2>
           <form onSubmit={handleCreate} className="mt-4 grid gap-4 md:grid-cols-2">
             <input
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
@@ -83,6 +115,7 @@ export default function TeacherCoursesPage() {
               value={formData.code}
               onChange={(event) => setFormData({ ...formData, code: event.target.value })}
               required
+              disabled={!!editing}
             />
             <input
               className="rounded-2xl border border-[var(--border)] px-4 py-2 text-sm"
@@ -104,9 +137,23 @@ export default function TeacherCoursesPage() {
               value={formData.capacity}
               onChange={(event) => setFormData({ ...formData, capacity: Number(event.target.value) })}
             />
-            <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white md:col-span-2">
-              Guardar curso
-            </button>
+            <div className="flex gap-3 md:col-span-2">
+              <button className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-semibold text-white" type="submit">
+                {editing ? 'Actualizar' : 'Guardar curso'}
+              </button>
+              {editing && (
+                <button
+                  className="rounded-full border border-[var(--border)] px-5 py-2 text-sm font-semibold"
+                  type="button"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormData({ code: '', name: '', description: '', capacity: 30 });
+                  }}
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
           </form>
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         </section>
@@ -120,16 +167,17 @@ export default function TeacherCoursesPage() {
                   <th className="py-3">Curso</th>
                   <th className="py-3">Cupos</th>
                   <th className="py-3">Estado</th>
+                  <th className="py-3">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={3} className="py-4 text-[var(--ink-muted)]">Cargando...</td>
+                    <td colSpan={4} className="py-4 text-[var(--ink-muted)]">Cargando...</td>
                   </tr>
                 ) : courses.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-4 text-[var(--ink-muted)]">No tienes cursos asignados.</td>
+                    <td colSpan={4} className="py-4 text-[var(--ink-muted)]">No tienes cursos asignados.</td>
                   </tr>
                 ) : (
                   courses.map((course) => (
@@ -140,6 +188,22 @@ export default function TeacherCoursesPage() {
                       </td>
                       <td className="py-3">{course.seatsTaken}/{course.capacity}</td>
                       <td className="py-3">{course.status}</td>
+                      <td className="py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                            onClick={() => handleEdit(course)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                            onClick={() => handleDelete(course.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}

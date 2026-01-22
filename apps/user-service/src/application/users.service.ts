@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 export type UserStatus = 'ACTIVE' | 'SUSPENDED';
 
@@ -7,22 +8,47 @@ export interface UserProfile {
   status: UserStatus;
   email: string;
   userType: 'STUDENT' | 'TEACHER' | 'ADMIN';
+  fullName?: string | null;
+  identificationNumber?: string | null;
 }
 
 @Injectable()
 export class UsersService {
-  private readonly users = new Map<string, UserProfile>();
+  constructor(private readonly configService: ConfigService) {}
 
-  constructor() {
-    this.users.set('11111111-1111-1111-1111-111111111111', {
-      id: '11111111-1111-1111-1111-111111111111',
-      status: 'ACTIVE',
-      email: 'student@uce.edu.ec',
-      userType: 'STUDENT',
-    });
-  }
-
-  getUser(userId: string): UserProfile | null {
-    return this.users.get(userId) ?? null;
+  async getUser(userId: string): Promise<UserProfile | null> {
+    const authUrl = this.configService.get<string>('AUTH_SERVICE_URL', 'http://auth-service:3001');
+    const internalKey = this.configService.get<string>('AUTH_SERVICE_INTERNAL_KEY', '').trim();
+    try {
+      if (typeof fetch === 'undefined') {
+        return null;
+      }
+      const headers: Record<string, string> = {};
+      if (internalKey) {
+        headers['x-internal-key'] = internalKey;
+      }
+      const response = await fetch(`${authUrl}/api/v1/internal/users/${userId}`, { headers });
+      if (!response.ok) {
+        return null;
+      }
+      const payload = (await response.json()) as {
+        id: string;
+        email: string;
+        status: UserStatus;
+        userType: UserProfile['userType'];
+        fullName?: string | null;
+        identificationNumber?: string | null;
+      };
+      return {
+        id: payload.id,
+        email: payload.email,
+        status: payload.status,
+        userType: payload.userType,
+        fullName: payload.fullName ?? null,
+        identificationNumber: payload.identificationNumber ?? null,
+      };
+    } catch {
+      return null;
+    }
   }
 }

@@ -73,6 +73,15 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
     return enrollment ? this.mapToEnrollmentRecord(enrollment) : null;
   }
 
+  async dropEnrollment(enrollmentId: string): Promise<EnrollmentRecord | null> {
+    const enrollment = await this.prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { status: 'DROPPED' },
+    });
+
+    return enrollment ? this.mapToEnrollmentRecord(enrollment) : null;
+  }
+
   private mapToEnrollmentRecord(enrollment: any): EnrollmentRecord {
     return {
       id: enrollment.id,

@@ -1,27 +1,26 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as amqp from 'amqplib';
 
 @Injectable()
 export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
-  private connection?: amqp.Connection | amqp.ChannelModel;
+  private readonly logger = new Logger(RabbitMqService.name);
+  private connection?: amqp.ChannelModel;
   private channel?: amqp.Channel;
 
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const url = this.configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672');
-    const connection = await amqp.connect(url);
-    const channel = await connection.createChannel();
-    this.connection = connection;
-    this.channel = channel;
+    this.connection = await this.connectWithRetry(url);
+    this.channel = await this.connection.createChannel();
   }
 
   async onModuleDestroy() {
     if (this.channel) {
       await this.channel.close();
     }
-    if (this.connection && 'close' in this.connection) {
+    if (this.connection) {
       await this.connection.close();
     }
   }
@@ -58,5 +57,21 @@ export class RabbitMqService implements OnModuleInit, OnModuleDestroy {
 
   async healthCheck(): Promise<boolean> {
     return Boolean(this.channel);
+  }
+
+  private async connectWithRetry(url: string, attempts = 8, delayMs = 1500): Promise<amqp.ChannelModel> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const connection = (await amqp.connect(url)) as amqp.ChannelModel;
+        this.logger.log('RabbitMQ connection established');
+        return connection;
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(`RabbitMQ connection failed (attempt ${attempt}/${attempts})`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw lastError;
   }
 }

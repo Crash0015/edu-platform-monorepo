@@ -25,6 +25,17 @@ export interface AvailabilityRepository {
     createdBy?: string | null;
   }): Promise<AvailabilityRecord>;
   updateStatus(id: string, status: AvailabilityStatus, updatedBy?: string | null): Promise<AvailabilityRecord | null>;
+  updateAvailability(
+    id: string,
+    input: {
+      courseId?: string | null;
+      startTime: Date;
+      endTime: Date;
+      timezone: string;
+      status: AvailabilityStatus;
+      updatedBy?: string | null;
+    },
+  ): Promise<AvailabilityRecord | null>;
   listAll(
     filters?: {
       startTimeFrom?: Date;

@@ -116,6 +116,47 @@ export class BookingResponseDto {
   reservedAt!: Date;
 }
 
+export class TeacherBookingResponseDto {
+  @ApiProperty({ example: 'uuid' })
+  sessionId!: string;
+
+  @ApiProperty({ example: 'uuid' })
+  teacherId!: string;
+
+  @ApiProperty({ example: 'uuid' })
+  courseId!: string;
+
+  @ApiProperty({ example: 'uuid' })
+  availabilitySlotId!: string;
+
+  @ApiProperty({ example: '2026-01-20T10:00:00Z' })
+  startTime!: Date;
+
+  @ApiProperty({ example: '2026-01-20T11:00:00Z' })
+  endTime!: Date;
+
+  @ApiProperty({ enum: TutoringModeDto })
+  mode!: TutoringModeDto;
+
+  @ApiProperty({ example: 'Zoom', required: false, nullable: true })
+  location!: string | null;
+
+  @ApiProperty({ example: 'https://meet.example.com/room', required: false, nullable: true })
+  meetingUrl!: string | null;
+
+  @ApiProperty({ example: 'uuid', required: false, nullable: true })
+  bookingId!: string | null;
+
+  @ApiProperty({ example: 'uuid', required: false, nullable: true })
+  studentId!: string | null;
+
+  @ApiProperty({ enum: BookingStatusDto, required: false, nullable: true })
+  bookingStatus!: BookingStatusDto | null;
+
+  @ApiProperty({ example: '2026-01-20T10:00:00Z', required: false, nullable: true })
+  reservedAt!: Date | null;
+}
+
 export class SessionResponseDto {
   @ApiProperty({ example: 'uuid' })
   id!: string;

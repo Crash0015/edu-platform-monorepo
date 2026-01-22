@@ -1,14 +1,30 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiConsumes,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MaterialsService } from '../../application/materials/materials.service';
 import {
   CreateMaterialRequestDto,
@@ -141,5 +157,27 @@ export class MaterialsController {
   ): Promise<MaterialResponseDto> {
     const context = this.createContext(request);
     return this.materialsService.publishMaterial(id, context) as Promise<MaterialResponseDto>;
+  }
+
+  @Post('uploads')
+  @HttpCode(201)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload material asset (Teacher/Admin only)' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAsset(@UploadedFile() file: Express.Multer.File, @Req() request: RequestWithUser) {
+    const context = this.createContext(request);
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.materialsService.uploadAsset(
+      {
+        buffer: file.buffer,
+        filename: file.originalname,
+        mimetype: file.mimetype,
+      },
+      context,
+    );
   }
 }

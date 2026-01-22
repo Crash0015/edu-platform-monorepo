@@ -9,12 +9,14 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Put } from '@nestjs/common';
 import { AvailabilityService } from '../../application/availability/availability.service';
 import {
   AvailabilityQueryDto,
   AvailabilityResponseDto,
   CreateAvailabilityRequestDto,
   UpdateAvailabilityStatusRequestDto,
+  UpdateAvailabilityRequestDto,
 } from './dto/availability.dto';
 
 type RequestWithUser = {
@@ -134,5 +136,30 @@ export class AvailabilityController {
   ): Promise<AvailabilityResponseDto> {
     const context = this.createContext(request);
     return this.availabilityService.updateAvailabilityStatus(id, body.status, context) as unknown as Promise<AvailabilityResponseDto>;
+  }
+
+  @Put('availability/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update availability slot (Teacher/Admin only)' })
+  @ApiOkResponse({ type: AvailabilityResponseDto })
+  @ApiNotFoundResponse({ description: 'Availability slot not found' })
+  @ApiUnauthorizedResponse({ description: 'Teacher or Admin role required' })
+  async updateAvailability(
+    @Param('id') id: string,
+    @Body() body: UpdateAvailabilityRequestDto,
+    @Req() request: RequestWithUser,
+  ): Promise<AvailabilityResponseDto> {
+    const context = this.createContext(request);
+    return this.availabilityService.updateAvailability(
+      id,
+      {
+        courseId: body.courseId,
+        startTime: body.startTime,
+        endTime: body.endTime,
+        timezone: body.timezone,
+        status: body.status,
+      },
+      context,
+    ) as unknown as Promise<AvailabilityResponseDto>;
   }
 }

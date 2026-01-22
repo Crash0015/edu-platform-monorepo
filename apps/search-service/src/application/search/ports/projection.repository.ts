@@ -2,6 +2,12 @@ export type EnrollmentProjection = {
   studentId: string;
   courseId: string;
   status: string;
+  course?: {
+    id?: string;
+    code: string;
+    name: string;
+    description?: string | null;
+  };
 };
 
 export interface ProjectionRepository {
