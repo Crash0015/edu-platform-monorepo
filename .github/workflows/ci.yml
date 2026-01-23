@@ -41,7 +41,12 @@ jobs:
 
       - name: Prisma generate (auth/enrollment)
         if: matrix.service == 'auth-service' || matrix.service == 'enrollment-service'
-        run: npm run prisma:generate
+        run: |
+          if [ "${{ matrix.service }}" = "auth-service" ]; then
+            DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npm run prisma:generate
+          else
+            DATABASE_URL=postgresql://edu:edu@localhost:5434/enrollmentdb npm run prisma:generate
+          fi
 
       - name: Lint (typecheck)
         run: npx tsc -p tsconfig.build.json --noEmit
@@ -73,7 +78,7 @@ jobs:
         run: npm ci
 
       - name: E2E tests (auth-service)
-        run: npm run test:e2e
+        run: DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npm run test:e2e
 
   auth-load-test:
     name: Auth Load Test
@@ -96,7 +101,7 @@ jobs:
         working-directory: apps/auth-service
 
       - name: Start auth dependencies
-        run: KAFKA_ENABLED=false docker compose -f infra/docker/docker-compose.local.yml up -d postgres redis
+        run: KAFKA_ENABLED=false docker compose -f infra/docker/docker-compose.yml --profile dev up -d postgres redis
 
       - name: Wait for postgres
         run: |
@@ -119,7 +124,7 @@ jobs:
           RATE_LIMIT_LOGIN_WINDOW_SEC=60 \
           RATE_LIMIT_REFRESH_MAX=10000 \
           RATE_LIMIT_REFRESH_WINDOW_SEC=60 \
-          docker compose -f infra/docker/docker-compose.local.yml up -d auth-service
+          docker compose -f infra/docker/docker-compose.yml --profile dev up -d auth-service
 
       - name: Show auth-service logs
         if: failure()
@@ -158,5 +163,165 @@ jobs:
 
       - name: Shutdown compose
         if: always()
-        run: docker compose -f infra/docker/docker-compose.local.yml down -v
+        run: docker compose -f infra/docker/docker-compose.yml --profile dev down -v
+
+  integration-flow:
+    name: Integration Flow
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Start integration stack
+        run: docker compose --env-file infra/docker/.env.ci -f infra/docker/docker-compose.yml --profile dev up -d postgres postgres-course postgres-enrollment redis zookeeper kafka rabbitmq auth-service user-service course-service enrollment-service notification-service api-gateway mailhog
+
+      - name: Wait for gateway
+        run: |
+          for i in {1..30}; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health | grep -q "200"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "api-gateway did not become healthy" && exit 1
+
+      - name: Run enrollment migration
+        run: docker exec edu-enrollment-service npm run prisma:migrate
+
+      - name: Run auth migration
+        run: docker exec -e DATABASE_URL=postgresql://edu:edu@postgres:5432/authdb edu-auth-service npm run prisma:migrate
+
+      - name: Run course migration
+        run: docker exec edu-course-service npm run prisma:migrate
+
+      - name: Seed course
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3004/api/v1/courses \
+            -H "Content-Type: application/json" \
+            -H "x-user-id: 33333333-3333-3333-3333-333333333333" \
+            -H "x-user-roles: TEACHER" \
+            -d '{"code":"CI-101","name":"Curso CI","description":"Curso de integracion","capacity":5}')
+          if [ "$STATUS" != "201" ] && [ "$STATUS" != "400" ]; then
+            echo "Unexpected course create status: $STATUS" && exit 1
+          fi
+
+      - name: Clear enrollments
+        run: docker exec edu-postgres-enrollment psql -U edu -d enrollmentdb -c "TRUNCATE enrollments;"
+
+      - name: Resolve course ID
+        id: course
+        run: |
+          COURSE_ID=$(curl -s http://localhost:3004/api/v1/courses/code/CI-101 | node -e "const fs=require('fs'); const raw=fs.readFileSync(0,'utf8').trim(); if (!raw) process.exit(1); const data=JSON.parse(raw); if (!data.id) process.exit(1); process.stdout.write(data.id);")
+          echo "course_id=$COURSE_ID" >> $GITHUB_OUTPUT
+
+      - name: Trigger enrollment via gateway
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/api/v1/gateway/enrollments/assign-with-profile \
+            -H "Content-Type: application/json" \
+            -H "x-user-id: 33333333-3333-3333-3333-333333333333" \
+            -H "x-user-roles: TEACHER" \
+            -d '{"email":"student@example.com","fullName":"CI Student","courseId":"${{ steps.course.outputs.course_id }}","correlationId":"ci-flow-001"}')
+          if [ "$STATUS" != "201" ] && [ "$STATUS" != "400" ]; then
+            echo "Unexpected enroll status: $STATUS" && exit 1
+          fi
+
+      - name: Verify email in MailHog
+        run: |
+          for i in {1..30}; do
+          COUNT=$(curl -s http://localhost:8025/api/v2/messages | grep -o '"total":[0-9]*' | cut -d: -f2)
+          if [ "${COUNT:-0}" -ge 1 ]; then
+            curl -s http://localhost:8025/api/v2/messages | grep -o '"Subject":\[[^]]*' | head -n 1
+            exit 0
+          fi
+
+            sleep 2
+          done
+          echo "No email received in MailHog" && exit 1
+
+      - name: Shutdown stack
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.yml --profile dev down -v
+
+  docker-publish:
+    name: Docker Build & Push (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, auth-e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - course-service
+          - enrollment-service
+          - notification-service
+          - automation-service
+          - material-service
+          - schedule-service
+          - search-service
+          - tutoring-service
+          - user-service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect service changes
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -E "^(apps/${{ matrix.service }}/|libs/|packages/)" -q; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        if: steps.changes.outputs.changed == 'true'
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        if: steps.changes.outputs.changed == 'true'
+
+      - name: Extract metadata
+        id: meta
+        if: steps.changes.outputs.changed == 'true'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+
+      - name: Build and push
+        if: steps.changes.outputs.changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:latest
+          cache-to: type=inline
+
+      - name: Skip docker publish (no changes)
+        if: steps.changes.outputs.changed != 'true'
+        run: echo "No changes for ${{ matrix.service }}, skipping build/push."
+
+      - name: Image digest
+        if: steps.changes.outputs.changed == 'true'
+        run: echo "✅ Image pushed: ${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:${{ steps.meta.outputs.tags }}"
 

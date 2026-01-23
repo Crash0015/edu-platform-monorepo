@@ -1,0 +1,63 @@
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = ">= 4.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = ">= 2.0"
+    }
+  }
+}
+
+module "vpc" {
+  source             = "../modules/vpc"
+  environment        = var.environment
+  cidr_block         = var.vpc_cidr
+  enable_nat_gateway = var.enable_nat_gateway
+  nat_gateway_per_az = var.nat_gateway_per_az
+}
+
+module "bastion" {
+  source            = "../modules/bastion"
+  vpc_id            = module.vpc.vpc_id
+  subnet_id         = module.vpc.public_subnet_id
+  environment       = var.environment
+  key_name          = var.bastion_key_name
+  create_key_pair   = var.bastion_create_key_pair
+  allowed_ssh_cidrs = var.bastion_allowed_ssh_cidrs
+}
+
+module "elb" {
+  source         = "../modules/elb"
+  vpc_id         = module.vpc.vpc_id
+  public_subnets = module.vpc.public_subnets
+  environment    = var.environment
+}
+
+module "asg" {
+  source               = "../modules/asg"
+  vpc_id               = module.vpc.vpc_id
+  private_subnets      = module.vpc.private_subnets
+  elb_target_group_arn = module.elb.target_group_arn
+  elb_sg_id            = module.elb.security_group_id
+  environment          = var.environment
+
+  instance_type            = var.asg_instance_type
+  min_size                 = var.asg_min_size
+  max_size                 = var.asg_max_size
+  desired_capacity         = var.asg_desired_capacity
+  enable_default_user_data = var.asg_enable_default_user_data
+}
+
+module "apigw" {
+  source       = "../modules/apigateway_http"
+  environment  = var.environment
+  alb_dns_name = module.elb.dns_name
+}

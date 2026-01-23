@@ -1,0 +1,28 @@
+#############################################
+# PROD - terraform.tfvars.example
+#
+# 1) Copy to: terraform.tfvars  (DO NOT COMMIT)
+# 2) Fill values from AWS Academy lab "AWS Details" panel
+#############################################
+
+aws_access_key     = "REPLACE_ME"
+aws_secret_key     = "REPLACE_ME"
+aws_session_token  = "REPLACE_ME"
+
+aws_region   = "us-east-1"
+environment  = "prod"
+vpc_cidr     = "10.20.0.0/16"
+
+# High availability defaults:
+enable_nat_gateway     = true
+nat_gateway_per_az     = true
+asg_min_size           = 2
+asg_desired_capacity   = 2
+
+# Bastion hardening (recommended):
+# bastion_key_name = "your-ec2-keypair"
+# bastion_allowed_ssh_cidrs = ["YOUR_PUBLIC_IP/32"]
+
+# Docker images (para ECS Fargate):
+# dockerhub_username = "tu-dockerhub-username"
+# image_tag = "latest"  # o "sha-abc123" o "v1.0.0"

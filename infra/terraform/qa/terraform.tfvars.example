@@ -1,0 +1,28 @@
+#############################################
+# QA - terraform.tfvars.example
+#
+# 1) Copy to: terraform.tfvars  (DO NOT COMMIT)
+# 2) Fill values from AWS Academy lab "AWS Details" panel
+#############################################
+
+aws_access_key     = "REPLACE_ME"
+aws_secret_key     = "REPLACE_ME"
+aws_session_token  = "REPLACE_ME"
+
+aws_region   = "us-east-1"
+environment  = "qa"
+vpc_cidr     = "10.10.0.0/16"
+
+# Cost vs HA:
+# - nat_gateway_per_az=false => 1 NAT (cheaper)  (still allows private subnet egress)
+# - nat_gateway_per_az=true  => 2 NAT (more HA, more cost)
+enable_nat_gateway = true
+nat_gateway_per_az = false
+
+# Bastion hardening (recommended):
+# bastion_key_name = "your-ec2-keypair"
+# bastion_allowed_ssh_cidrs = ["YOUR_PUBLIC_IP/32"]
+
+# Docker images (para ECS Fargate):
+# dockerhub_username = "tu-dockerhub-username"
+# image_tag = "latest"  # o "sha-abc123" o "v1.0.0"
