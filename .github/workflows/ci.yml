@@ -191,7 +191,7 @@ jobs:
         run: docker exec edu-enrollment-service npm run prisma:migrate
 
       - name: Run auth migration
-        run: docker exec edu-auth-service npm run prisma:migrate
+        run: docker exec -e DATABASE_URL=postgresql://edu:edu@postgres:5432/authdb edu-auth-service npm run prisma:migrate
 
       - name: Run course migration
         run: docker exec edu-course-service npm run prisma:migrate

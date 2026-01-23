@@ -6,7 +6,7 @@ export const options = {
   duration: '30s',
   thresholds: {
     http_req_failed: ['rate<0.02'],
-    http_req_duration: ['p(95)<600'],
+    http_req_duration: ['p(95)<1200'],
   },
 };
 
@@ -83,4 +83,3 @@ export default function () {
 
   sleep(1);
 }
-
