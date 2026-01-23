@@ -79,3 +79,21 @@ variable "log_retention_days" {
   type        = number
   default     = 7
 }
+
+variable "use_existing_iam_roles" {
+  description = "Si true, usa roles IAM existentes en lugar de crear nuevos (útil para AWS Academy)"
+  type        = bool
+  default     = false
+}
+
+variable "existing_execution_role_name" {
+  description = "Nombre del rol IAM de ejecución existente (si use_existing_iam_roles=true)"
+  type        = string
+  default     = ""
+}
+
+variable "existing_task_role_name" {
+  description = "Nombre del rol IAM de tarea existente (si use_existing_iam_roles=true)"
+  type        = string
+  default     = ""
+}

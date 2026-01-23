@@ -4,7 +4,11 @@ resource "aws_launch_template" "main" {
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.asg.id]
 
-  user_data = var.enable_default_user_data ? base64encode(templatefile("${path.module}/user_data.sh.tftpl", {})) : null
+  user_data = var.deploy_services ? base64encode(templatefile("${path.module}/user_data_services.sh.tftpl", {
+    DOCKERHUB_USERNAME = var.dockerhub_username
+    IMAGE_TAG          = var.image_tag
+    ENVIRONMENT        = var.environment
+  })) : (var.enable_default_user_data ? base64encode(templatefile("${path.module}/user_data.sh.tftpl", {})) : null)
 
   tag_specifications {
     resource_type = "instance"

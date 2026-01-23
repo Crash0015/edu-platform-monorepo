@@ -46,6 +46,11 @@ module "api_gateway_ecs" {
   task_memory   = 512
   desired_count = 1
 
+  # Usar roles IAM existentes (AWS Academy no permite crear roles)
+  use_existing_iam_roles = true
+  existing_execution_role_name = "ecsTaskExecutionRole"
+  existing_task_role_name = "ecsTaskRole"
+
   environment_variables = [
     {
       name  = "NODE_ENV"
@@ -94,6 +99,11 @@ module "auth_service_ecs" {
   task_cpu     = 512
   task_memory   = 1024
   desired_count = 1
+
+  # Usar roles IAM existentes (AWS Academy no permite crear roles)
+  use_existing_iam_roles = true
+  existing_execution_role_name = "ecsTaskExecutionRole"
+  existing_task_role_name = "ecsTaskRole"
 
   environment_variables = [
     {
@@ -144,6 +154,11 @@ module "course_service_ecs" {
   task_memory   = 1024
   desired_count = 1
 
+  # Usar roles IAM existentes (AWS Academy no permite crear roles)
+  use_existing_iam_roles = true
+  existing_execution_role_name = "ecsTaskExecutionRole"
+  existing_task_role_name = "ecsTaskRole"
+
   environment_variables = [
     {
       name  = "NODE_ENV"
@@ -192,6 +207,11 @@ module "enrollment_service_ecs" {
   task_cpu     = 512
   task_memory   = 1024
   desired_count = 1
+
+  # Usar roles IAM existentes (AWS Academy no permite crear roles)
+  use_existing_iam_roles = true
+  existing_execution_role_name = "ecsTaskExecutionRole"
+  existing_task_role_name = "ecsTaskRole"
 
   environment_variables = [
     {

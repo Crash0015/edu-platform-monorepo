@@ -48,6 +48,9 @@ module "asg" {
   elb_target_group_arn = module.elb.target_group_arn
   elb_sg_id            = module.elb.security_group_id
   environment          = var.environment
+  deploy_services      = true
+  dockerhub_username   = var.dockerhub_username
+  image_tag            = var.image_tag
 }
 
 module "apigw" {

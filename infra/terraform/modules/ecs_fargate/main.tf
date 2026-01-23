@@ -12,8 +12,8 @@ resource "aws_ecs_task_definition" "service" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.task_cpu
   memory                   = var.task_memory
-  execution_role_arn       = aws_iam_role.ecs_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task.arn
+  execution_role_arn       = local.ecs_execution_role_arn
+  task_role_arn            = local.ecs_task_role_arn
 
   container_definitions = jsonencode([
     {
@@ -74,8 +74,8 @@ resource "aws_ecs_service" "main" {
     container_port   = var.container_port
   }
 
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_execution,
+  depends_on = var.use_existing_iam_roles ? [] : [
+    aws_iam_role_policy_attachment.ecs_execution[0],
   ]
 
   tags = {
@@ -124,8 +124,21 @@ resource "aws_cloudwatch_log_group" "service" {
 }
 
 # IAM Role for ECS Task Execution (pulling images, writing logs)
+# Usar data source para obtener roles IAM existentes si están disponibles
+# Si no existen, intentar crearlos (fallará en AWS Academy pero no romperá el plan)
+data "aws_iam_role" "ecs_execution_existing" {
+  count = var.use_existing_iam_roles ? 1 : 0
+  name  = var.existing_execution_role_name != "" ? var.existing_execution_role_name : "ecsTaskExecutionRole"
+}
+
+data "aws_iam_role" "ecs_task_existing" {
+  count = var.use_existing_iam_roles ? 1 : 0
+  name  = var.existing_task_role_name != "" ? var.existing_task_role_name : "ecsTaskRole"
+}
+
 resource "aws_iam_role" "ecs_execution" {
-  name = "${var.environment}-${var.service_name}-execution-role"
+  count = var.use_existing_iam_roles ? 0 : 1
+  name  = "${var.environment}-${var.service_name}-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -147,13 +160,15 @@ resource "aws_iam_role" "ecs_execution" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution" {
-  role       = aws_iam_role.ecs_execution.name
+  count      = var.use_existing_iam_roles ? 0 : 1
+  role       = aws_iam_role.ecs_execution[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 # IAM Role for ECS Task (application permissions)
 resource "aws_iam_role" "ecs_task" {
-  name = "${var.environment}-${var.service_name}-task-role"
+  count = var.use_existing_iam_roles ? 0 : 1
+  name  = "${var.environment}-${var.service_name}-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -172,6 +187,12 @@ resource "aws_iam_role" "ecs_task" {
     Name        = "${var.environment}-${var.service_name}-task-role"
     Environment = var.environment
   }
+}
+
+# Local values para usar el rol existente o el creado
+locals {
+  ecs_execution_role_arn = var.use_existing_iam_roles ? data.aws_iam_role.ecs_execution_existing[0].arn : aws_iam_role.ecs_execution[0].arn
+  ecs_task_role_arn      = var.use_existing_iam_roles ? data.aws_iam_role.ecs_task_existing[0].arn : aws_iam_role.ecs_task[0].arn
 }
 
 data "aws_region" "current" {}
