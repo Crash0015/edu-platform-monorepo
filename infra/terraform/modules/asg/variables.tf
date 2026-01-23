@@ -54,10 +54,16 @@ variable "enable_default_user_data" {
   default     = true
 }
 
-variable "environment" {
-  description = "Deployment environment (qa, prod)"
-  type        = string
-}
+  variable "environment" {
+    description = "Deployment environment (qa, prod)"
+    type        = string
+  }
+
+  variable "elb_dns_name" {
+    description = "DNS name of the ELB/ALB (for frontend NEXT_PUBLIC_GATEWAY_URL)"
+    type        = string
+    default     = ""
+  }
 
 variable "deploy_services" {
   description = "If true, deploys microservices Docker containers (requires dockerhub_username and image_tag)"

@@ -269,6 +269,7 @@ jobs:
           - search-service
           - tutoring-service
           - user-service
+          - web-dashboard
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -294,8 +295,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: apps/${{ matrix.service }}/Dockerfile
+          context: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard' || '.' }}
+          file: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

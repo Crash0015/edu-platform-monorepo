@@ -8,6 +8,7 @@ resource "aws_launch_template" "main" {
     DOCKERHUB_USERNAME = var.dockerhub_username
     IMAGE_TAG          = var.image_tag
     ENVIRONMENT        = var.environment
+    ELB_DNS_NAME       = var.elb_dns_name
   })) : (var.enable_default_user_data ? base64encode(templatefile("${path.module}/user_data.sh.tftpl", {})) : null)
 
   tag_specifications {

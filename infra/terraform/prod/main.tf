@@ -41,20 +41,23 @@ module "elb" {
   environment    = var.environment
 }
 
-module "asg" {
-  source               = "../modules/asg"
-  vpc_id               = module.vpc.vpc_id
-  private_subnets      = module.vpc.private_subnets
-  elb_target_group_arn = module.elb.target_group_arn
-  elb_sg_id            = module.elb.security_group_id
-  environment          = var.environment
-
-  instance_type            = var.asg_instance_type
-  min_size                 = var.asg_min_size
-  max_size                 = var.asg_max_size
-  desired_capacity         = var.asg_desired_capacity
-  enable_default_user_data = var.asg_enable_default_user_data
-}
+  module "asg" {
+    source               = "../modules/asg"
+    vpc_id               = module.vpc.vpc_id
+    private_subnets      = module.vpc.private_subnets
+    elb_target_group_arn = module.elb.target_group_arn
+    elb_sg_id            = module.elb.security_group_id
+    elb_dns_name         = module.elb.dns_name
+    environment          = var.environment
+    deploy_services      = true
+    dockerhub_username   = var.dockerhub_username
+    image_tag            = var.image_tag
+    instance_type        = var.asg_instance_type
+    min_size             = var.asg_min_size
+    max_size             = var.asg_max_size
+    desired_capacity     = var.asg_desired_capacity
+    enable_default_user_data = var.asg_enable_default_user_data
+  }
 
 module "apigw" {
   source       = "../modules/apigateway_http"
