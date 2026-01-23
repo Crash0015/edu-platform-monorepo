@@ -16,6 +16,14 @@ data "aws_vpc" "existing" {
   id    = var.existing_vpc_id
 }
 
+data "aws_internet_gateway" "existing" {
+  count = var.use_existing_vpc ? 1 : 0
+  filter {
+    name   = "attachment.vpc-id"
+    values = [var.existing_vpc_id]
+  }
+}
+
 resource "aws_vpc" "main" {
   count                = var.use_existing_vpc ? 0 : 1
   cidr_block           = var.cidr_block
