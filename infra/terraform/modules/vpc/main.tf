@@ -38,7 +38,7 @@ locals {
 
 resource "aws_subnet" "public" {
   count                   = 2
-  vpc_id                  = aws_vpc.main.id
+  vpc_id                  = local.vpc_id
   cidr_block              = cidrsubnet(var.cidr_block, 4, count.index)
   availability_zone       = element(local.availability_zones, count.index)
   map_public_ip_on_launch = true
@@ -59,17 +59,18 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+  count  = var.use_existing_vpc ? 0 : 1
+  vpc_id = local.vpc_id
   tags = {
     Name = "${var.environment}-igw"
   }
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = local.vpc_id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = var.use_existing_vpc ? data.aws_internet_gateway.existing[0].id : aws_internet_gateway.main[0].id
   }
   tags = {
     Name = "${var.environment}-public-rt"
@@ -104,7 +105,7 @@ resource "aws_nat_gateway" "main" {
 
 resource "aws_route_table" "private" {
   count  = var.enable_nat_gateway ? (var.nat_gateway_per_az ? length(aws_subnet.private) : 1) : 0
-  vpc_id = aws_vpc.main.id
+  vpc_id = local.vpc_id
 
   route {
     cidr_block     = "0.0.0.0/0"
@@ -123,7 +124,7 @@ resource "aws_route_table_association" "private" {
 }
 
 output "vpc_id" {
-  value = aws_vpc.main.id
+  value = local.vpc_id
 }
 
 output "public_subnets" {
