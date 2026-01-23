@@ -175,7 +175,7 @@ jobs:
           node-version: 22
 
       - name: Start integration stack
-        run: docker compose --env-file infra/docker/.env.ci -f infra/docker/docker-compose.yml --profile dev up -d postgres-course postgres-enrollment zookeeper kafka rabbitmq user-service course-service enrollment-service notification-service api-gateway mailhog
+        run: docker compose --env-file infra/docker/.env.ci -f infra/docker/docker-compose.yml --profile dev up -d postgres postgres-course postgres-enrollment redis zookeeper kafka rabbitmq auth-service user-service course-service enrollment-service notification-service api-gateway mailhog
 
       - name: Wait for gateway
         run: |
@@ -189,6 +189,9 @@ jobs:
 
       - name: Run enrollment migration
         run: docker exec edu-enrollment-service npm run prisma:migrate
+
+      - name: Run auth migration
+        run: docker exec edu-auth-service npm run prisma:migrate
 
       - name: Run course migration
         run: docker exec edu-course-service npm run prisma:migrate
