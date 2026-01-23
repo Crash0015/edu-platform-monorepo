@@ -304,5 +304,5 @@ jobs:
           cache-to: type=inline
 
       - name: Image pushed
-        run: echo "Image pushed: ${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:latest"
+        run: echo "Image pushed successfully"
 
