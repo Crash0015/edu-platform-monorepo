@@ -10,7 +10,7 @@ resource "tls_private_key" "bastion" {
 
 resource "aws_key_pair" "bastion" {
   count      = var.create_key_pair && var.key_name == null ? 1 : 0
-  key_name   = "${var.environment}-bastion-key"
+  key_name   = "${var.environment}-bastion-key-${substr(md5("${var.environment}-bastion"), 0, 8)}"
   public_key = tls_private_key.bastion[0].public_key_openssh
 
   tags = {

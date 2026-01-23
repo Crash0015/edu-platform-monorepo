@@ -114,7 +114,7 @@ resource "aws_security_group" "ecs_service" {
 }
 
 resource "aws_cloudwatch_log_group" "service" {
-  name              = "/ecs/${var.environment}/${var.service_name}"
+  name              = "/ecs/${var.environment}/${var.service_name}-${substr(md5("${var.environment}-${var.service_name}"), 0, 8)}"
   retention_in_days = var.log_retention_days
   tags = {
     Name        = "${var.environment}-${var.service_name}-logs"

@@ -1,5 +1,5 @@
 resource "aws_lb_target_group" "service" {
-  name        = "${var.environment}-${var.service_name}-tg"
+  name        = "${var.environment}-${var.service_name}-tg-${substr(md5("${var.environment}-${var.service_name}"), 0, 8)}"
   port        = var.port
   protocol    = var.protocol
   vpc_id      = var.vpc_id

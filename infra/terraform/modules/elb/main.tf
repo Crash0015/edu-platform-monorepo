@@ -1,5 +1,5 @@
 resource "aws_lb" "main" {
-  name               = "${var.environment}-elb"
+  name               = "${var.environment}-elb-${substr(md5("${var.environment}-elb"), 0, 8)}"
   internal           = false
   load_balancer_type = "application"
   subnets            = var.public_subnets
@@ -37,7 +37,7 @@ resource "aws_security_group" "elb" {
 }
 
 resource "aws_lb_target_group" "main" {
-  name     = "${var.environment}-tg"
+  name     = "${var.environment}-tg-${substr(md5("${var.environment}-tg"), 0, 8)}"
   port     = 80
   protocol = "HTTP"
   vpc_id   = var.vpc_id
