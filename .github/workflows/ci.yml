@@ -295,7 +295,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard' || '.' }}
+          context: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard' || format('apps/{0}', matrix.service) }}
           file: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
