@@ -1,6 +1,6 @@
 resource "aws_launch_template" "main" {
   name_prefix            = "${var.environment}-lt-"
-  image_id               = data.aws_ami.amazon_linux.id
+  image_id               = var.ami_id != "" ? var.ami_id : "ami-0c55b159cbfafe1f0" # Amazon Linux 2 us-east-1
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.asg.id]
 

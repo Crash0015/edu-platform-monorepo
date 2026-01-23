@@ -30,3 +30,9 @@ variable "environment" {
   description = "Deployment environment (qa, prod)"
   type        = string
 }
+
+variable "ami_id" {
+  description = "AMI ID for Amazon Linux 2 (hardcoded to avoid DescribeImages permission in AWS Academy)"
+  type        = string
+  default     = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 us-east-1
+}
