@@ -47,18 +47,21 @@ variable "bastion_allowed_ssh_cidrs" {
 }
 
 variable "aws_access_key" {
-  description = "AWS Access Key ID"
+  description = "AWS Access Key ID (opcional, puede usar AWS_ACCESS_KEY_ID env var)"
   type        = string
+  default     = ""
 }
 
 variable "aws_secret_key" {
-  description = "AWS Secret Access Key"
+  description = "AWS Secret Access Key (opcional, puede usar AWS_SECRET_ACCESS_KEY env var)"
   type        = string
+  default     = ""
 }
 
 variable "aws_session_token" {
-  description = "AWS Session Token (para credenciales temporales)"
+  description = "AWS Session Token (opcional, puede usar AWS_SESSION_TOKEN env var)"
   type        = string
+  default     = ""
 }
 
 variable "dockerhub_username" {
