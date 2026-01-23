@@ -137,7 +137,7 @@ services:
   search-service:
     image: ${DOCKERHUB_USERNAME}/edu-search-service:${IMAGE_TAG}
     ports:
-      - "3010:3008"
+      - "3011:3008"
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3008
@@ -223,7 +223,7 @@ http {
     server localhost:3009;
   }
   upstream search_service {
-    server localhost:3010;
+    server localhost:3011;
   }
   upstream tutoring_service {
     server localhost:3010;
