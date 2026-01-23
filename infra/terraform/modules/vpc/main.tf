@@ -26,14 +26,11 @@ resource "aws_vpc" "main" {
   }
 }
 
-locals {
-  vpc_id = var.use_existing_vpc ? data.aws_vpc.existing[0].id : aws_vpc.main[0].id
-}
-
 # Zonas de disponibilidad hardcodeadas para evitar permisos ec2:DescribeAvailabilityZones (AWS Academy restrictions)
 # us-east-1 tiene múltiples AZs, usamos las más comunes
 locals {
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
+  vpc_id              = var.use_existing_vpc ? data.aws_vpc.existing[0].id : aws_vpc.main[0].id
 }
 
 resource "aws_subnet" "public" {
