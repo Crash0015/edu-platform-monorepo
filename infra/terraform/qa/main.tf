@@ -41,18 +41,18 @@ module "elb" {
   environment    = var.environment
 }
 
-  module "asg" {
-    source               = "../modules/asg"
-    vpc_id               = module.vpc.vpc_id
-    private_subnets      = module.vpc.private_subnets
-    elb_target_group_arn = module.elb.target_group_arn
-    elb_sg_id            = module.elb.security_group_id
-    elb_dns_name         = module.elb.dns_name
-    environment          = var.environment
-    deploy_services      = true
-    dockerhub_username   = var.dockerhub_username
-    image_tag            = var.image_tag
-  }
+module "asg" {
+  source               = "../modules/asg"
+  vpc_id               = module.vpc.vpc_id
+  private_subnets      = module.vpc.private_subnets
+  elb_target_group_arn = module.elb.target_group_arn
+  elb_sg_id            = module.elb.security_group_id
+  elb_dns_name         = module.elb.dns_name
+  environment          = var.environment
+  deploy_services      = true
+  dockerhub_username   = var.dockerhub_username
+  image_tag            = var.image_tag
+}
 
 # AWS API Gateway removido - usando api-gateway microservicio como punto de entrada
 # El ALB expone directamente el DNS público
