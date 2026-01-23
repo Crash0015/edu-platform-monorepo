@@ -74,7 +74,7 @@ resource "aws_ecs_service" "main" {
     container_port   = var.container_port
   }
 
-  depends_on = var.use_existing_iam_roles ? [] : [
+  depends_on = var.use_existing_iam_roles ? null : [
     aws_iam_role_policy_attachment.ecs_execution[0],
   ]
 
