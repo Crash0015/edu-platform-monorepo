@@ -323,5 +323,5 @@ jobs:
 
       - name: Image digest
         if: steps.changes.outputs.changed == 'true'
-        run: echo "✅ Image pushed: ${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:${{ steps.meta.outputs.tags }}"
+        run: echo "Image pushed: ${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:${{ steps.meta.outputs.tags }}"
 
