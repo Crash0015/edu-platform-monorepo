@@ -53,8 +53,10 @@ module "asg" {
   image_tag            = var.image_tag
 }
 
-module "apigw" {
-  source       = "../modules/apigateway_http"
-  environment  = var.environment
-  alb_dns_name = module.elb.dns_name
-}
+# AWS API Gateway removido - usando api-gateway microservicio como punto de entrada
+# El ALB expone directamente el DNS público
+# module "apigw" {
+#   source       = "../modules/apigateway_http"
+#   environment  = var.environment
+#   alb_dns_name = module.elb.dns_name
+# }

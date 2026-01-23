@@ -14,8 +14,13 @@ output "elb_dns_name" {
 }
 
 output "api_gateway_url" {
-  description = "API Gateway HTTP API endpoint (proxies to the ALB)"
-  value       = module.apigw.api_endpoint
+  description = "API Gateway endpoint (ALB DNS - api-gateway microservicio es el punto de entrada)"
+  value       = "http://${module.elb.dns_name}"
+}
+
+output "api_gateway_https_url" {
+  description = "API Gateway HTTPS endpoint (si se configura certificado SSL en el futuro)"
+  value       = "https://${module.elb.dns_name}"
 }
 
 output "asg_name" {
