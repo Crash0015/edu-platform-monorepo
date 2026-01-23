@@ -75,3 +75,15 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "use_existing_vpc" {
+  description = "Si true, usa una VPC existente (requerido si AWS Academy bloquea CreateVpc)"
+  type        = bool
+  default     = false
+}
+
+variable "existing_vpc_id" {
+  description = "ID de VPC existente (requerido si use_existing_vpc=true)"
+  type        = string
+  default     = ""
+}

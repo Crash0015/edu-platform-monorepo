@@ -22,6 +22,8 @@ module "vpc" {
   cidr_block         = var.vpc_cidr
   enable_nat_gateway = var.enable_nat_gateway
   nat_gateway_per_az = var.nat_gateway_per_az
+  use_existing_vpc   = var.use_existing_vpc
+  existing_vpc_id    = var.existing_vpc_id
 }
 
 module "bastion" {

@@ -23,6 +23,10 @@ nat_gateway_per_az = false
 # bastion_key_name = "your-ec2-keypair"
 # bastion_allowed_ssh_cidrs = ["YOUR_PUBLIC_IP/32"]
 
-# Docker images (para ECS Fargate):
+# Docker images:
 # dockerhub_username = "tu-dockerhub-username"
 # image_tag = "latest"  # o "sha-abc123" o "v1.0.0"
+
+# Si AWS Academy bloquea CreateVpc, usar VPC existente:
+# use_existing_vpc = true
+# existing_vpc_id = "vpc-xxxxx"  # ID de VPC existente (obtener de AWS Console)
