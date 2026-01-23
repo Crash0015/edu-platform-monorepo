@@ -107,19 +107,16 @@ jobs:
     name: Terraform Apply (QA)
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'push' && 
-      (github.ref == 'refs/heads/qa' || github.ref == 'refs/heads/main')
-    # Esperar a que las imágenes Docker estén listas
-    needs: []
-    # Usar workflow_run para esperar a que CI complete docker-publish
-    # Nota: workflow_run solo funciona con workflows en la misma rama
-    # Por ahora, confiamos en que docker-publish se ejecuta primero
+      (github.event_name == 'push' && (github.ref == 'refs/heads/qa' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.head_branch == 'qa' || github.event.workflow_run.head_branch == 'main'))
     defaults:
       run:
         working-directory: infra/terraform/qa
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -166,14 +163,16 @@ jobs:
     name: Terraform Apply (PROD)
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'push' && 
-      github.ref == 'refs/heads/prod'
+      (github.event_name == 'push' && github.ref == 'refs/heads/prod') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'prod')
     defaults:
       run:
         working-directory: infra/terraform/prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
