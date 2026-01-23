@@ -109,6 +109,11 @@ jobs:
     if: |
       github.event_name == 'push' && 
       (github.ref == 'refs/heads/qa' || github.ref == 'refs/heads/main')
+    # Esperar a que las imágenes Docker estén listas
+    needs: []
+    # Usar workflow_run para esperar a que CI complete docker-publish
+    # Nota: workflow_run solo funciona con workflows en la misma rama
+    # Por ahora, confiamos en que docker-publish se ejecuta primero
     defaults:
       run:
         working-directory: infra/terraform/qa
