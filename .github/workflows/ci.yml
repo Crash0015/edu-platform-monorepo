@@ -78,7 +78,7 @@ jobs:
         run: npm ci
 
       - name: E2E tests (auth-service)
-        run: npm run test:e2e
+        run: DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npm run test:e2e
 
   auth-load-test:
     name: Auth Load Test
