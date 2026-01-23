@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Despliega servicios Docker en EC2 (alternativa a ECS para AWS Academy)
-# Instala Docker y despliega los microservicios
+# Despliega TODOS los microservicios Docker en EC2 (alternativa a ECS para AWS Academy)
+# Instala Docker y despliega los 11 microservicios
 
 yum update -y
 amazon-linux-extras install docker -y || yum install -y docker
@@ -18,7 +18,7 @@ chmod +x /usr/local/bin/docker-compose
 mkdir -p /opt/services
 cd /opt/services
 
-# Docker Compose para servicios
+# Docker Compose para TODOS los servicios
 cat > docker-compose.yml <<'EOF'
 version: '3.8'
 services:
@@ -64,6 +64,34 @@ services:
       timeout: 10s
       retries: 3
 
+  notification-service:
+    image: ${DOCKERHUB_USERNAME}/edu-notification-service:${IMAGE_TAG}
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3005
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  automation-service:
+    image: ${DOCKERHUB_USERNAME}/edu-automation-service:${IMAGE_TAG}
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3006
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   enrollment-service:
     image: ${DOCKERHUB_USERNAME}/edu-enrollment-service:${IMAGE_TAG}
     ports:
@@ -77,10 +105,77 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-EOF
 
-# Login a DockerHub (si es necesario)
-# docker login -u ${DOCKERHUB_USERNAME} -p ${DOCKERHUB_TOKEN}
+  schedule-service:
+    image: ${DOCKERHUB_USERNAME}/edu-schedule-service:${IMAGE_TAG}
+    ports:
+      - "3008:3008"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3008
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  user-service:
+    image: ${DOCKERHUB_USERNAME}/edu-user-service:${IMAGE_TAG}
+    ports:
+      - "3009:3008"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3008
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  search-service:
+    image: ${DOCKERHUB_USERNAME}/edu-search-service:${IMAGE_TAG}
+    ports:
+      - "3010:3008"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3008
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  tutoring-service:
+    image: ${DOCKERHUB_USERNAME}/edu-tutoring-service:${IMAGE_TAG}
+    ports:
+      - "3010:3010"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3010
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  material-service:
+    image: ${DOCKERHUB_USERNAME}/edu-material-service:${IMAGE_TAG}
+    ports:
+      - "3012:3012"
+    environment:
+      - NODE_ENV=${ENVIRONMENT}
+      - PORT=3012
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3012/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+EOF
 
 # Iniciar servicios
 docker-compose up -d
@@ -99,7 +194,7 @@ HEALTHEOF
 
 chmod +x /opt/health.sh
 
-# Nginx como reverse proxy para el ALB
+# Nginx como reverse proxy para el ALB - RUTAS COMPLETAS
 cat > /opt/nginx.conf <<'NGINXEOF'
 events {}
 http {
@@ -112,8 +207,29 @@ http {
   upstream course_service {
     server localhost:3004;
   }
+  upstream notification_service {
+    server localhost:3005;
+  }
+  upstream automation_service {
+    server localhost:3006;
+  }
   upstream enrollment_service {
     server localhost:3007;
+  }
+  upstream schedule_service {
+    server localhost:3008;
+  }
+  upstream user_service {
+    server localhost:3009;
+  }
+  upstream search_service {
+    server localhost:3010;
+  }
+  upstream tutoring_service {
+    server localhost:3010;
+  }
+  upstream material_service {
+    server localhost:3012;
   }
 
   server {
@@ -125,28 +241,103 @@ http {
       add_header Content-Type text/plain;
     }
 
-    location /api/v1/auth/ {
-      proxy_pass http://auth_service;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /api/v1/courses/ {
-      proxy_pass http://course_service;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /api/v1/enrollments/ {
-      proxy_pass http://enrollment_service;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-    }
-
+    # API Gateway - todas las rutas que no coincidan
     location / {
       proxy_pass http://api_gateway;
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Auth Service
+    location /api/v1/auth/ {
+      proxy_pass http://auth_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Course Service
+    location /api/v1/courses/ {
+      proxy_pass http://course_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Notification Service
+    location /api/v1/notifications/ {
+      proxy_pass http://notification_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Automation Service
+    location /api/v1/automation/ {
+      proxy_pass http://automation_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Enrollment Service
+    location /api/v1/enrollments/ {
+      proxy_pass http://enrollment_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Schedule Service
+    location /api/v1/schedules/ {
+      proxy_pass http://schedule_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # User Service
+    location /api/v1/users/ {
+      proxy_pass http://user_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Search Service
+    location /api/v1/search/ {
+      proxy_pass http://search_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Tutoring Service
+    location /api/v1/tutoring/ {
+      proxy_pass http://tutoring_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Material Service
+    location /api/v1/materials/ {
+      proxy_pass http://material_service;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
     }
   }
 }
