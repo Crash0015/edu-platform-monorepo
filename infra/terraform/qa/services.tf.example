@@ -1,0 +1,130 @@
+# ============================================
+# ECS Fargate Services Example
+# ============================================
+# 
+# Este archivo muestra cómo desplegar microservicios en ECS Fargate.
+# Copia este archivo a services.tf y ajusta según tus necesidades.
+#
+# IMPORTANTE: Necesitas configurar estos secrets en GitHub:
+# - DOCKERHUB_USERNAME (ya lo tienes)
+# - AWS_ACCESS_KEY_ID (de AWS Academy)
+# - AWS_SECRET_ACCESS_KEY (de AWS Academy)
+# - AWS_SESSION_TOKEN (de AWS Academy, credenciales temporales)
+#
+# ============================================
+
+# Target Group para API Gateway
+module "api_gateway_tg" {
+  source = "../modules/alb_target_group"
+
+  environment  = var.environment
+  service_name = "api-gateway"
+  vpc_id       = module.vpc.vpc_id
+  listener_arn = module.elb.listener_arn
+
+  path_patterns = ["/api/*"]
+  priority      = 100
+
+  port              = 3000
+  health_check_path = "/health"
+}
+
+# ECS Service para API Gateway
+module "api_gateway_ecs" {
+  source = "../modules/ecs_fargate"
+
+  environment        = var.environment
+  service_name        = "api-gateway"
+  vpc_id              = module.vpc.vpc_id
+  private_subnets     = module.vpc.private_subnets
+  alb_security_group_id = module.elb.security_group_id
+  target_group_arn    = module.api_gateway_tg.target_group_arn
+
+  docker_image = "${var.dockerhub_username}/edu-api-gateway"
+  image_tag    = var.image_tag
+  container_port = 3000
+
+  task_cpu    = 256
+  task_memory = 512
+  desired_count = var.environment == "prod" ? 2 : 1
+
+  environment_variables = [
+    {
+      name  = "NODE_ENV"
+      value = var.environment
+    },
+    {
+      name  = "PORT"
+      value = "3000"
+    },
+    {
+      name  = "AUTH_SERVICE_URL"
+      value = "http://${module.auth_service_ecs.service_name}.${var.environment}.local:3001"
+    }
+  ]
+
+  health_check_command = ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+}
+
+# Target Group para Auth Service
+module "auth_service_tg" {
+  source = "../modules/alb_target_group"
+
+  environment  = var.environment
+  service_name = "auth-service"
+  vpc_id       = module.vpc.vpc_id
+  listener_arn = module.elb.listener_arn
+
+  path_patterns = ["/api/v1/auth/*"]
+  priority      = 200
+
+  port              = 3001
+  health_check_path = "/health"
+}
+
+# ECS Service para Auth Service
+module "auth_service_ecs" {
+  source = "../modules/ecs_fargate"
+
+  environment        = var.environment
+  service_name       = "auth-service"
+  vpc_id             = module.vpc.vpc_id
+  private_subnets    = module.vpc.private_subnets
+  alb_security_group_id = module.elb.security_group_id
+  target_group_arn    = module.auth_service_tg.target_group_arn
+
+  docker_image = "${var.dockerhub_username}/edu-auth-service"
+  image_tag    = var.image_tag
+  container_port = 3001
+
+  task_cpu    = 512
+  task_memory = 1024
+  desired_count = var.environment == "prod" ? 2 : 1
+
+  environment_variables = [
+    {
+      name  = "NODE_ENV"
+      value = var.environment
+    },
+    {
+      name  = "PORT"
+      value = "3001"
+    },
+    {
+      name  = "DATABASE_URL"
+      value = "postgresql://edu:edu@${var.rds_endpoint}/authdb"
+    },
+    {
+      name  = "REDIS_URL"
+      value = "redis://${var.redis_endpoint}:6379"
+    }
+  ]
+
+  health_check_command = ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+}
+
+# Repite el patrón para otros servicios:
+# - course-service (puerto 3004)
+# - enrollment-service (puerto 3007)
+# - notification-service (puerto 3005)
+# - etc.

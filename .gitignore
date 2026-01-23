@@ -54,6 +54,8 @@ Thumbs.db
 *.tfplan
 .terraform.lock.hcl
 crash.log
+**/terraform.tfvars
+**/*.auto.tfvars
 
 ####################################
 # Docker / Containers

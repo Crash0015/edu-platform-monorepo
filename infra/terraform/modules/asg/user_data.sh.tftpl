@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+# Minimal bootstrap for demo workload behind ALB+ASG.
+# Installs Docker and runs Nginx with a /health endpoint (200 OK).
+
+yum update -y
+amazon-linux-extras install docker -y || yum install -y docker
+systemctl enable docker
+systemctl start docker
+
+cat >/opt/nginx.conf <<'EOF'
+events {}
+http {
+  server {
+    listen 80;
+    location /health {
+      add_header Content-Type text/plain;
+      return 200 "ok\n";
+    }
+    location / {
+      add_header Content-Type text/plain;
+      return 200 "edu-platform asg ok\n";
+    }
+  }
+}
+EOF
+
+docker rm -f edu-nginx || true
+docker run -d --name edu-nginx --restart=always -p 80:80 -v /opt/nginx.conf:/etc/nginx/nginx.conf:ro nginx:stable
+
