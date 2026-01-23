@@ -58,3 +58,21 @@ variable "environment" {
   description = "Deployment environment (qa, prod)"
   type        = string
 }
+
+variable "deploy_services" {
+  description = "If true, deploys microservices Docker containers (requires dockerhub_username and image_tag)"
+  type        = bool
+  default     = false
+}
+
+variable "dockerhub_username" {
+  description = "DockerHub username for pulling images"
+  type        = string
+  default     = ""
+}
+
+variable "image_tag" {
+  description = "Docker image tag to deploy"
+  type        = string
+  default     = "latest"
+}
