@@ -41,7 +41,12 @@ jobs:
 
       - name: Prisma generate (auth/enrollment)
         if: matrix.service == 'auth-service' || matrix.service == 'enrollment-service'
-        run: npm run prisma:generate
+        run: |
+          if [ "${{ matrix.service }}" = "auth-service" ]; then
+            DATABASE_URL=postgresql://edu:edu@localhost:5433/authdb npm run prisma:generate
+          else
+            DATABASE_URL=postgresql://edu:edu@localhost:5434/enrollmentdb npm run prisma:generate
+          fi
 
       - name: Lint (typecheck)
         run: npx tsc -p tsconfig.build.json --noEmit
