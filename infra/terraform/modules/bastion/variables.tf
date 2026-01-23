@@ -15,7 +15,7 @@ variable "key_name" {
 }
 
 variable "create_key_pair" {
-  description = "Si true, crea un EC2 Key Pair automáticamente y guarda la clave privada localmente"
+  description = "Si true, crea un EC2 Key Pair automáticamente (DESHABILITADO por defecto - AWS Academy no permite ImportKeyPair)"
   type        = bool
   default     = false
 }

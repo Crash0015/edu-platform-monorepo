@@ -30,7 +30,7 @@ module "bastion" {
   subnet_id         = module.vpc.public_subnet_id
   environment       = var.environment
   key_name          = var.bastion_key_name
-  create_key_pair   = var.bastion_create_key_pair
+  create_key_pair   = false # DESHABILITADO - AWS Academy no permite ImportKeyPair
   allowed_ssh_cidrs = var.bastion_allowed_ssh_cidrs
 }
 

@@ -1,10 +1,33 @@
+# Opción para usar VPC existente (si AWS Academy no permite crear VPCs)
+variable "use_existing_vpc" {
+  description = "Si true, usa una VPC existente en lugar de crear una nueva"
+  type        = bool
+  default     = false
+}
+
+variable "existing_vpc_id" {
+  description = "ID de VPC existente (requerido si use_existing_vpc=true)"
+  type        = string
+  default     = ""
+}
+
+data "aws_vpc" "existing" {
+  count = var.use_existing_vpc ? 1 : 0
+  id    = var.existing_vpc_id
+}
+
 resource "aws_vpc" "main" {
+  count                = var.use_existing_vpc ? 0 : 1
   cidr_block           = var.cidr_block
   enable_dns_support   = true
   enable_dns_hostnames = true
   tags = {
     Name = "${var.environment}-vpc"
   }
+}
+
+locals {
+  vpc_id = var.use_existing_vpc ? data.aws_vpc.existing[0].id : aws_vpc.main[0].id
 }
 
 # Zonas de disponibilidad hardcodeadas para evitar permisos ec2:DescribeAvailabilityZones (AWS Academy restrictions)
@@ -26,7 +49,7 @@ resource "aws_subnet" "public" {
 
 resource "aws_subnet" "private" {
   count                   = 2
-  vpc_id                  = aws_vpc.main.id
+  vpc_id                  = local.vpc_id
   cidr_block              = cidrsubnet(var.cidr_block, 4, count.index + 2)
   availability_zone       = element(local.availability_zones, count.index)
   map_public_ip_on_launch = false
@@ -76,7 +99,7 @@ resource "aws_nat_gateway" "main" {
     Name = "${var.environment}-nat-${count.index}"
   }
 
-  depends_on = [aws_internet_gateway.main]
+  depends_on = var.use_existing_vpc ? [] : [aws_internet_gateway.main[0]]
 }
 
 resource "aws_route_table" "private" {
