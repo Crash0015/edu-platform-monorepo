@@ -105,9 +105,8 @@ resource "aws_nat_gateway" "main" {
     Name = "${var.environment}-nat-${count.index}"
   }
 
-  # depends_on solo cuando creamos VPC nueva (IGW se crea)
-  # Si usamos VPC existente, el IGW ya existe y no necesitamos dependencia explícita
-  depends_on = var.use_existing_vpc ? [] : [aws_internet_gateway.main[0]]
+  # Terraform no permite depends_on condicional
+  # La dependencia implícita a través del subnet es suficiente
 }
 
 resource "aws_route_table" "private" {
