@@ -7,7 +7,11 @@ resource "aws_vpc" "main" {
   }
 }
 
-data "aws_availability_zones" "available" {}
+# Zonas de disponibilidad hardcodeadas para evitar permisos ec2:DescribeAvailabilityZones (AWS Academy restrictions)
+# us-east-1 tiene múltiples AZs, usamos las más comunes
+locals {
+  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
+}
 
 resource "aws_subnet" "public" {
   count                   = 2

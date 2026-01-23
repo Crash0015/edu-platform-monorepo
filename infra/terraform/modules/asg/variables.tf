@@ -65,6 +65,12 @@ variable "enable_default_user_data" {
     default     = ""
   }
 
+  variable "ami_id" {
+    description = "AMI ID for Amazon Linux 2 (hardcoded to avoid DescribeImages permission in AWS Academy)"
+    type        = string
+    default     = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 us-east-1
+  }
+
 variable "deploy_services" {
   description = "If true, deploys microservices Docker containers (requires dockerhub_username and image_tag)"
   type        = bool

@@ -30,13 +30,12 @@ resource "aws_security_group" "bastion" {
   }
 }
 
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
+# AMI hardcodeado para evitar permisos ec2:DescribeImages (AWS Academy restrictions)
+# Amazon Linux 2 AMI ID para us-east-1
+variable "ami_id" {
+  description = "AMI ID for Amazon Linux 2 (hardcoded to avoid DescribeImages permission)"
+  type        = string
+  default     = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 AMI us-east-1
 }
 
 output "public_ip" {
