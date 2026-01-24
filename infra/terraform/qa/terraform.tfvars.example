@@ -11,13 +11,9 @@ aws_session_token  = "REPLACE_ME"
 
 aws_region   = "us-east-1"
 environment  = "qa"
-vpc_cidr     = "10.10.0.0/16"
 
-# Cost vs HA:
-# - nat_gateway_per_az=false => 1 NAT (cheaper)  (still allows private subnet egress)
-# - nat_gateway_per_az=true  => 2 NAT (more HA, more cost)
-enable_nat_gateway = true
-nat_gateway_per_az = false
+# NOTA: Usa VPC default existente - no se crean VPC, subnets, NAT Gateway
+# Esto simplifica y evita permisos bloqueados en AWS Academy
 
 # Bastion hardening (recommended):
 # bastion_key_name = "your-ec2-keypair"
@@ -27,6 +23,3 @@ nat_gateway_per_az = false
 # dockerhub_username = "tu-dockerhub-username"
 # image_tag = "latest"  # o "sha-abc123" o "v1.0.0"
 
-# Si AWS Academy bloquea CreateVpc, usar VPC existente:
-# use_existing_vpc = true
-# existing_vpc_id = "vpc-xxxxx"  # ID de VPC existente (obtener de AWS Console)

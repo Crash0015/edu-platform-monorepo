@@ -1,44 +1,20 @@
-# Opción para usar VPC existente (si AWS Academy no permite crear VPCs)
-variable "use_existing_vpc" {
-  description = "Si true, usa una VPC existente en lugar de crear una nueva"
-  type        = bool
-  default     = false
+# Usar VPC default existente (AWS Academy no permite CreateVpc)
+# No creamos VPC nueva, usamos la default que ya existe
+data "aws_vpc" "default" {
+  default = true
 }
 
-variable "existing_vpc_id" {
-  description = "ID de VPC existente (requerido si use_existing_vpc=true)"
-  type        = string
-  default     = ""
-}
-
-data "aws_vpc" "existing" {
-  count = var.use_existing_vpc ? 1 : 0
-  id    = var.existing_vpc_id
-}
-
-data "aws_internet_gateway" "existing" {
-  count = var.use_existing_vpc ? 1 : 0
+data "aws_internet_gateway" "default" {
   filter {
     name   = "attachment.vpc-id"
-    values = [var.existing_vpc_id]
-  }
-}
-
-resource "aws_vpc" "main" {
-  count                = var.use_existing_vpc ? 0 : 1
-  cidr_block           = var.cidr_block
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-  tags = {
-    Name = "${var.environment}-vpc"
+    values = [data.aws_vpc.default.id]
   }
 }
 
 # Zonas de disponibilidad hardcodeadas para evitar permisos ec2:DescribeAvailabilityZones (AWS Academy restrictions)
-# us-east-1 tiene múltiples AZs, usamos las más comunes
 locals {
   availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
-  vpc_id              = var.use_existing_vpc ? data.aws_vpc.existing[0].id : aws_vpc.main[0].id
+  vpc_id              = data.aws_vpc.default.id
 }
 
 resource "aws_subnet" "public" {
@@ -134,13 +110,17 @@ output "vpc_id" {
 }
 
 output "public_subnets" {
-  value = aws_subnet.public[*].id
+  # Usar todas las subnets default (normalmente son públicas)
+  value = data.aws_subnets.default.ids
 }
 
 output "private_subnets" {
-  value = aws_subnet.private[*].id
+  # Para simplificar, usar las mismas subnets (default VPC normalmente tiene subnets públicas)
+  # Si necesitas privadas, puedes crear NAT Gateway después manualmente
+  value = data.aws_subnets.default.ids
 }
 
 output "public_subnet_id" {
-  value = aws_subnet.public[0].id
+  # Usar la primera subnet default
+  value = data.aws_subnets.default.ids[0]
 }

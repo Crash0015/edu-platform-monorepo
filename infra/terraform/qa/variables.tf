@@ -10,23 +10,8 @@ variable "environment" {
   default     = "qa"
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
-  type        = string
-  default     = "10.10.0.0/16"
-}
-
-variable "enable_nat_gateway" {
-  description = "Create NAT gateway(s) so instances in private subnets can reach the Internet (required for package pulls)"
-  type        = bool
-  default     = true
-}
-
-variable "nat_gateway_per_az" {
-  description = "If true, 1 NAT per AZ (higher availability, higher cost). QA can use false to save cost."
-  type        = bool
-  default     = false
-}
+# Variables de VPC removidas - usamos VPC default existente
+# No se crean VPC, subnets, NAT Gateway (simplificado para AWS Academy)
 
 variable "bastion_key_name" {
   description = "EC2 Key Pair name used by the bastion (opcional). Si no se proporciona y bastion_create_key_pair=true, se crea uno automáticamente."
@@ -76,14 +61,3 @@ variable "image_tag" {
   default     = "latest"
 }
 
-variable "use_existing_vpc" {
-  description = "Si true, usa una VPC existente (requerido si AWS Academy bloquea CreateVpc)"
-  type        = bool
-  default     = false
-}
-
-variable "existing_vpc_id" {
-  description = "ID de VPC existente (requerido si use_existing_vpc=true)"
-  type        = string
-  default     = ""
-}
