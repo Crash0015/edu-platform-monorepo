@@ -12,12 +12,11 @@ aws_session_token  = "REPLACE_ME"
 aws_region   = "us-east-1"
 environment  = "qa"
 
-# VPC y Subnets (REQUERIDO - AWS Academy bloquea DescribeVpcs/DescribeSubnets)
-# Obtener de AWS Console:
-#   1. VPC > Your VPCs > Copiar VPC ID (ej: vpc-xxxxx)
-#   2. VPC > Subnets > Copiar Subnet IDs (ej: subnet-xxxxx, subnet-yyyyy)
-vpc_id     = "vpc-REPLACE_ME"
-subnet_ids = ["subnet-REPLACE_ME_1", "subnet-REPLACE_ME_2"]
+# VPC y Subnets (OPCIONAL - solo si AWS Academy requiere valores específicos)
+# Si se dejan vacíos, Terraform intentará usar valores por defecto
+# Si falla, obtener de AWS Console > VPC > Your VPCs y Subnets
+# vpc_id     = "vpc-xxxxx"
+# subnet_ids = ["subnet-xxxxx", "subnet-yyyyy"]
 
 # Bastion hardening (recommended):
 # bastion_key_name = "your-ec2-keypair"

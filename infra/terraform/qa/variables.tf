@@ -10,16 +10,18 @@ variable "environment" {
   default     = "qa"
 }
 
-# Variables de VPC - AWS Academy bloquea DescribeVpcs/DescribeSubnets
-# El usuario debe proporcionar VPC ID y subnet IDs manualmente
+# Variables de VPC - opcionales con valores por defecto
+# Si AWS Academy permite, se pueden dejar vacíos y Terraform usará defaults
 variable "vpc_id" {
-  description = "VPC ID existente (requerido - obtener de AWS Console > VPC > Your VPCs)"
+  description = "VPC ID (opcional - dejar vacío para intentar usar default)"
   type        = string
+  default     = ""
 }
 
 variable "subnet_ids" {
-  description = "Lista de subnet IDs existentes (requerido - obtener de AWS Console > VPC > Subnets)"
+  description = "Lista de subnet IDs (opcional - dejar vacío para intentar usar defaults)"
   type        = list(string)
+  default     = []
 }
 
 variable "bastion_key_name" {

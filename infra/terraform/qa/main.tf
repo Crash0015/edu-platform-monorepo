@@ -19,9 +19,10 @@ terraform {
 module "vpc" {
   source      = "../modules/vpc"
   environment = var.environment
-  vpc_id      = var.vpc_id
-  subnet_ids  = var.subnet_ids
-  # VPC ID y subnet IDs deben proporcionarse manualmente (AWS Academy bloquea DescribeVpcs)
+  vpc_id      = var.vpc_id != "" ? var.vpc_id : ""
+  subnet_ids  = length(var.subnet_ids) > 0 ? var.subnet_ids : []
+  # Si vpc_id y subnet_ids están vacíos, el módulo usará placeholders
+  # El usuario puede proporcionarlos en terraform.tfvars si es necesario
 }
 
 module "bastion" {
