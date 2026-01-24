@@ -40,25 +40,8 @@ resource "aws_autoscaling_group" "main" {
   }
 }
 
-resource "aws_security_group" "asg" {
-  name        = "${var.environment}-asg-sg"
-  description = "Allow traffic from ELB"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port       = var.instance_port
-    to_port         = var.instance_port
-    protocol        = "tcp"
-    security_groups = [var.elb_sg_id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+# Security Group removido - AWS Academy bloquea CreateSecurityGroup
+# Se usa el security_group_id proporcionado o default
 
 output "asg_name" {
   value = aws_autoscaling_group.main.name

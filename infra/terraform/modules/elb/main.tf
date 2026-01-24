@@ -1,38 +1,29 @@
+# AWS Academy bloquea CreateSecurityGroup - usar Security Group existente o default
+variable "security_group_id" {
+  description = "Security Group ID existente para ELB (opcional - si no se proporciona, se intenta usar default)"
+  type        = string
+  default     = ""
+}
+
+# Intentar obtener Security Group default si no se proporciona uno
+data "aws_security_group" "default" {
+  count = var.security_group_id == "" ? 1 : 0
+  name  = "default"
+  vpc_id = var.vpc_id
+}
+
+locals {
+  elb_sg_id = var.security_group_id != "" ? var.security_group_id : (length(data.aws_security_group.default) > 0 ? data.aws_security_group.default[0].id : "")
+}
+
 resource "aws_lb" "main" {
   name               = "${var.environment}-elb-${substr(md5("${var.environment}-elb"), 0, 8)}"
   internal           = false
   load_balancer_type = "application"
   subnets            = var.public_subnets
-  security_groups    = [aws_security_group.elb.id]
+  security_groups    = local.elb_sg_id != "" ? [local.elb_sg_id] : []
   tags = {
     Name = "${var.environment}-elb"
-  }
-}
-
-resource "aws_security_group" "elb" {
-  name        = "${var.environment}-elb-sg"
-  description = "Allow HTTP/HTTPS access"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 

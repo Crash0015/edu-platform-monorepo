@@ -36,3 +36,9 @@ variable "ami_id" {
   type        = string
   default     = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 us-east-1
 }
+
+variable "security_group_id" {
+  description = "Security Group ID existente para bastion (opcional - si no se proporciona, se intenta usar default)"
+  type        = string
+  default     = ""
+}
