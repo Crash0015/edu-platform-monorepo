@@ -10,8 +10,17 @@ variable "environment" {
   default     = "qa"
 }
 
-# Variables de VPC removidas - usamos VPC default existente
-# No se crean VPC, subnets, NAT Gateway (simplificado para AWS Academy)
+# Variables de VPC - AWS Academy bloquea DescribeVpcs/DescribeSubnets
+# El usuario debe proporcionar VPC ID y subnet IDs manualmente
+variable "vpc_id" {
+  description = "VPC ID existente (requerido - obtener de AWS Console > VPC > Your VPCs)"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "Lista de subnet IDs existentes (requerido - obtener de AWS Console > VPC > Subnets)"
+  type        = list(string)
+}
 
 variable "bastion_key_name" {
   description = "EC2 Key Pair name used by the bastion (opcional). Si no se proporciona y bastion_create_key_pair=true, se crea uno automáticamente."

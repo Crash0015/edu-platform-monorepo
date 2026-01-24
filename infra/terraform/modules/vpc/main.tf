@@ -27,16 +27,16 @@ output "vpc_id" {
 }
 
 output "public_subnets" {
-  # Usar todas las subnets default (normalmente son públicas)
-  value = data.aws_subnets.default.ids
+  # Usar las subnets proporcionadas por el usuario
+  value = var.subnet_ids
 }
 
 output "private_subnets" {
-  # Para simplificar, usar las mismas subnets (default VPC normalmente tiene subnets públicas)
-  value = data.aws_subnets.default.ids
+  # Para simplificar, usar las mismas subnets
+  value = var.subnet_ids
 }
 
 output "public_subnet_id" {
-  # Usar la primera subnet default
-  value = data.aws_subnets.default.ids[0]
+  # Usar la primera subnet proporcionada
+  value = var.subnet_ids[0]
 }

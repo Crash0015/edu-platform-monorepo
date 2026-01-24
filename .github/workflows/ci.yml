@@ -292,16 +292,34 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=sha-
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard' || format('apps/{0}', matrix.service) }}
-          file: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:latest
-          cache-to: type=inline
+          - name: Build and push
+            uses: docker/build-push-action@v5
+            with:
+              context: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard' || format('apps/{0}', matrix.service) }}
+              file: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
+              push: true
+              tags: ${{ steps.meta.outputs.tags }}
+              labels: ${{ steps.meta.outputs.labels }}
+              cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:latest
+              cache-to: type=inline
+              # Retry on rate limit
+              no-cache: false
+            env:
+              DOCKER_BUILDKIT: 1
+            continue-on-error: true
+          - name: Retry build on rate limit
+            if: failure()
+            uses: docker/build-push-action@v5
+            with:
+              context: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard' || format('apps/{0}', matrix.service) }}
+              file: ${{ matrix.service == 'web-dashboard' && 'frontend/web-dashboard/Dockerfile' || format('apps/{0}/Dockerfile', matrix.service) }}
+              push: true
+              tags: ${{ steps.meta.outputs.tags }}
+              labels: ${{ steps.meta.outputs.labels }}
+              cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/edu-${{ matrix.service }}:latest
+              cache-to: type=inline
+            env:
+              DOCKER_BUILDKIT: 1
 
       - name: Image pushed
         run: echo "Image pushed successfully"
