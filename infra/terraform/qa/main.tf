@@ -47,13 +47,12 @@ module "asg" {
   vpc_id               = module.vpc.vpc_id
   private_subnets      = module.vpc.private_subnets
   elb_target_group_arn = module.elb.target_group_arn
-  elb_sg_id            = var.elb_security_group_id != "" ? var.elb_security_group_id : ""
+  elb_sg_id            = module.elb.security_group_id
   elb_dns_name         = module.elb.dns_name
   environment          = var.environment
   deploy_services      = true
   dockerhub_username   = var.dockerhub_username
   image_tag            = var.image_tag
-  security_group_id    = var.asg_security_group_id
 }
 
 # AWS API Gateway removido - usando api-gateway microservicio como punto de entrada

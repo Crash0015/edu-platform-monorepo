@@ -88,9 +88,3 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
-
-variable "security_group_id" {
-  description = "Security Group ID existente para ASG (opcional - si no se proporciona, se intenta usar default)"
-  type        = string
-  default     = ""
-}

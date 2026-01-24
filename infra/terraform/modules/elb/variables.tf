@@ -18,9 +18,3 @@ variable "environment" {
   description = "Deployment environment (qa, prod)"
   type        = string
 }
-
-variable "security_group_id" {
-  description = "Security Group ID existente para ELB (opcional - si no se proporciona, se intenta usar default)"
-  type        = string
-  default     = ""
-}

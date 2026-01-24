@@ -40,8 +40,6 @@ resource "aws_autoscaling_group" "main" {
   }
 }
 
-# Security Group removido - AWS Academy bloquea CreateSecurityGroup
-# Se usa el security_group_id proporcionado o default
 
 output "asg_name" {
   value = aws_autoscaling_group.main.name
