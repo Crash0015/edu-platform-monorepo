@@ -1,25 +1,17 @@
-# Usar VPC default existente (AWS Academy no permite CreateVpc)
-# No creamos VPC, subnets, IGW, NAT Gateway - usamos los que ya existen
-data "aws_vpc" "default" {
-  default = true
+# AWS Academy bloquea DescribeVpcs, DescribeSubnets, etc.
+# El usuario debe proporcionar VPC ID y subnet IDs manualmente
+variable "vpc_id" {
+  description = "VPC ID existente (requerido - obtener de AWS Console)"
+  type        = string
 }
 
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
-data "aws_internet_gateway" "default" {
-  filter {
-    name   = "attachment.vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
+variable "subnet_ids" {
+  description = "Lista de subnet IDs existentes (requerido - obtener de AWS Console)"
+  type        = list(string)
 }
 
 locals {
-  vpc_id = data.aws_vpc.default.id
+  vpc_id = var.vpc_id
 }
 
 output "vpc_id" {

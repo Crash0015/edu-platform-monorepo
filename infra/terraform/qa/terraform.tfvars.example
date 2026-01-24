@@ -12,8 +12,12 @@ aws_session_token  = "REPLACE_ME"
 aws_region   = "us-east-1"
 environment  = "qa"
 
-# NOTA: Usa VPC default existente - no se crean VPC, subnets, NAT Gateway
-# Esto simplifica y evita permisos bloqueados en AWS Academy
+# VPC y Subnets (REQUERIDO - AWS Academy bloquea DescribeVpcs/DescribeSubnets)
+# Obtener de AWS Console:
+#   1. VPC > Your VPCs > Copiar VPC ID (ej: vpc-xxxxx)
+#   2. VPC > Subnets > Copiar Subnet IDs (ej: subnet-xxxxx, subnet-yyyyy)
+vpc_id     = "vpc-REPLACE_ME"
+subnet_ids = ["subnet-REPLACE_ME_1", "subnet-REPLACE_ME_2"]
 
 # Bastion hardening (recommended):
 # bastion_key_name = "your-ec2-keypair"

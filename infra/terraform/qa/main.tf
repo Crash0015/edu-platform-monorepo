@@ -17,9 +17,11 @@ terraform {
 }
 
 module "vpc" {
-  source             = "../modules/vpc"
-  environment        = var.environment
-  # Usa VPC default existente - no crea VPC nueva
+  source      = "../modules/vpc"
+  environment = var.environment
+  vpc_id      = var.vpc_id
+  subnet_ids  = var.subnet_ids
+  # VPC ID y subnet IDs deben proporcionarse manualmente (AWS Academy bloquea DescribeVpcs)
 }
 
 module "bastion" {
