@@ -66,7 +66,7 @@ output "target_group_arn" {
 }
 
 output "security_group_id" {
-  value = aws_security_group.elb.id
+  value = local.elb_sg_id
 }
 
 output "listener_arn" {
