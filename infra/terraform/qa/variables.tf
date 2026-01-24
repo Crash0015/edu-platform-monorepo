@@ -12,16 +12,22 @@ variable "environment" {
 
 # Variables de VPC - opcionales con valores por defecto
 # Si AWS Academy permite, se pueden dejar vacíos y Terraform usará defaults
-variable "vpc_id" {
-  description = "VPC ID (opcional - dejar vacío para intentar usar default)"
+variable "vpc_cidr" {
+  description = "CIDR block for VPC"
   type        = string
-  default     = ""
+  default     = "10.10.0.0/16"
 }
 
-variable "subnet_ids" {
-  description = "Lista de subnet IDs (opcional - dejar vacío para intentar usar defaults)"
-  type        = list(string)
-  default     = []
+variable "enable_nat_gateway" {
+  description = "Should be true if you want to provision NAT Gateways for private subnets"
+  type        = bool
+  default     = true
+}
+
+variable "nat_gateway_per_az" {
+  description = "Should be true if you want to provision NAT Gateway per availability zone"
+  type        = bool
+  default     = false
 }
 
 variable "bastion_key_name" {

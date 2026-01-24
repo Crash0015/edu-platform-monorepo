@@ -37,13 +37,13 @@ variable "min_size" {
 }
 
 variable "max_size" {
-  description = "ASG maximum size"
+  description = "ASG maximum size (optimizado para AWS Academy: máximo 8 instancias para respetar límite de 10)"
   type        = number
-  default     = 4
+  default     = 8
 }
 
 variable "desired_capacity" {
-  description = "ASG desired capacity"
+  description = "ASG desired capacity (optimizado para AWS Academy: 2 instancias iniciales)"
   type        = number
   default     = 2
 }

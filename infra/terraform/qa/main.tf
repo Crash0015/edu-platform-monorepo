@@ -17,12 +17,11 @@ terraform {
 }
 
 module "vpc" {
-  source      = "../modules/vpc"
-  environment = var.environment
-  vpc_id      = var.vpc_id != "" ? var.vpc_id : ""
-  subnet_ids  = length(var.subnet_ids) > 0 ? var.subnet_ids : []
-  # Si vpc_id y subnet_ids están vacíos, el módulo usará placeholders
-  # El usuario puede proporcionarlos en terraform.tfvars si es necesario
+  source               = "../modules/vpc"
+  environment          = var.environment
+  vpc_cidr             = var.vpc_cidr
+  enable_nat_gateway   = var.enable_nat_gateway
+  nat_gateway_per_az   = var.nat_gateway_per_az
 }
 
 module "bastion" {
@@ -53,6 +52,11 @@ module "asg" {
   deploy_services      = true
   dockerhub_username   = var.dockerhub_username
   image_tag            = var.image_tag
+  
+  # Configuración optimizada para AWS Academy
+  instance_type    = "t3.micro"  # Más barato que t3.small
+  max_size         = 8           # Máximo 8 instancias (respetando límite de 10 total)
+  desired_capacity = 2           # 2 instancias iniciales
 }
 
 # AWS API Gateway removido - usando api-gateway microservicio como punto de entrada
