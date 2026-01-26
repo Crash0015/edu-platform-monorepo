@@ -3,6 +3,26 @@ name: CI
 on:
   push:
   pull_request:
+    paths:
+      - 'infra/terraform/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: 'Terraform action (plan/apply/destroy)'
+        required: false
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      terraform_environment:
+        description: 'Environment (qa/prod)'
+        required: false
+        type: choice
+        options:
+          - qa
+          - prod
 
 jobs:
   lint-and-test:
@@ -252,7 +272,7 @@ jobs:
   docker-publish:
     name: Docker Build & Push (${{ matrix.service }})
     runs-on: ubuntu-latest
-    needs: [lint-and-test, auth-e2e]
+    needs: [lint-and-test, auth-e2e, auth-load-test]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa' || github.ref == 'refs/heads/prod')
     strategy:
       fail-fast: false
@@ -322,3 +342,283 @@ jobs:
       - name: Image pushed
         run: echo "Image pushed successfully"
 
+  docker-publish-complete:
+    name: Docker Publish Complete
+    runs-on: ubuntu-latest
+    needs: docker-publish
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa' || github.ref == 'refs/heads/prod')
+    steps:
+      - name: All images published
+        run: echo "All Docker images have been published successfully"
+
+  terraform-apply-qa:
+    name: Terraform Apply (QA)
+    runs-on: ubuntu-latest
+    needs: docker-publish-complete
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa')
+    defaults:
+      run:
+        working-directory: infra/terraform/qa
+    env:
+      TF_VERSION: '1.14.3'
+      AWS_REGION: 'us-east-1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN }}
+        run: terraform init
+
+      - name: Terraform Validate
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN }}
+        run: |
+          terraform plan \
+            -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Output Infrastructure Info
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN }}
+        run: |
+          echo "=========================================="
+          echo "🚀 INFRAESTRUCTURA DESPLEGADA EXITOSAMENTE"
+          echo "=========================================="
+          echo ""
+          terraform output
+          echo ""
+          echo "=========================================="
+          echo "🌐 URL DEL FRONTEND:"
+          echo "=========================================="
+          ELB_DNS=$(terraform output -raw elb_dns_name)
+          echo "Frontend URL: http://$ELB_DNS"
+          echo "API Gateway URL: http://$ELB_DNS/api/v1"
+          echo ""
+          echo "=========================================="
+          echo "✅ Puedes acceder a tu aplicación en:"
+          echo "   http://$ELB_DNS"
+          echo "=========================================="
+
+  terraform-apply-prod:
+    name: Terraform Apply (PROD)
+    runs-on: ubuntu-latest
+    needs: docker-publish-complete
+    if: github.event_name == 'push' && github.ref == 'refs/heads/prod'
+    defaults:
+      run:
+        working-directory: infra/terraform/prod
+    env:
+      TF_VERSION: '1.14.3'
+      AWS_REGION: 'us-east-1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+        run: terraform init
+
+      - name: Terraform Validate
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+        run: |
+          terraform plan \
+            -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID_PROD }}" \
+            -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}" \
+            -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN_PROD }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Output Infrastructure Info
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+        run: |
+          echo "=========================================="
+          echo "🚀 INFRAESTRUCTURA DESPLEGADA EXITOSAMENTE"
+          echo "=========================================="
+          echo ""
+          terraform output
+          echo ""
+          echo "=========================================="
+          echo "🌐 URL DEL FRONTEND:"
+          echo "=========================================="
+          ELB_DNS=$(terraform output -raw elb_dns_name)
+          echo "Frontend URL: http://$ELB_DNS"
+          echo "API Gateway URL: http://$ELB_DNS/api/v1"
+          echo ""
+          echo "=========================================="
+          echo "✅ Puedes acceder a tu aplicación en:"
+          echo "   http://$ELB_DNS"
+          echo "=========================================="
+
+  terraform-plan-pr:
+    name: Terraform Plan PR (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [qa, prod]
+    defaults:
+      run:
+        working-directory: infra/terraform/${{ matrix.environment }}
+    env:
+      TF_VERSION: '1.14.3'
+      AWS_REGION: 'us-east-1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: tf-plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ matrix.environment == 'qa' && (secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID) || secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ matrix.environment == 'qa' && (secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY) || secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ matrix.environment == 'qa' && (secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN) || secrets.AWS_SESSION_TOKEN_PROD }}
+        run: |
+          terraform plan -no-color \
+            -var="aws_access_key=${{ matrix.environment == 'qa' && (secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID) || secrets.AWS_ACCESS_KEY_ID_PROD }}" \
+            -var="aws_secret_key=${{ matrix.environment == 'qa' && (secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY) || secrets.AWS_SECRET_ACCESS_KEY_PROD }}" \
+            -var="aws_session_token=${{ matrix.environment == 'qa' && (secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN) || secrets.AWS_SESSION_TOKEN_PROD }}" \
+            -out=tfplan 2>&1 | tee plan_output.txt
+        continue-on-error: true
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.existsSync('plan_output.txt') 
+              ? fs.readFileSync('plan_output.txt', 'utf8') 
+              : 'Plan output not available';
+            
+            const output = `#### Terraform Plan (${{ matrix.environment }}) 📖
+            \`\`\`
+            ${planOutput}
+            \`\`\`
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+  terraform-manual:
+    name: Terraform Manual (${{ github.event.inputs.terraform_environment }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_action != ''
+    defaults:
+      run:
+        working-directory: infra/terraform/${{ github.event.inputs.terraform_environment }}
+    env:
+      TF_VERSION: '1.14.3'
+      AWS_REGION: 'us-east-1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN_PROD }}
+        run: terraform init
+
+      - name: Terraform ${{ github.event.inputs.terraform_action }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          AWS_SESSION_TOKEN: ${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN_PROD }}
+        run: |
+          if [ "${{ github.event.inputs.terraform_action }}" = "plan" ]; then
+            terraform plan \
+              -var="aws_access_key=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID_PROD }}" \
+              -var="aws_secret_key=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY_PROD }}" \
+              -var="aws_session_token=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN_PROD }}"
+          elif [ "${{ github.event.inputs.terraform_action }}" = "apply" ]; then
+            terraform apply -auto-approve \
+              -var="aws_access_key=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_ACCESS_KEY_ID_PROD }}" \
+              -var="aws_secret_key=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY_PROD }}" \
+              -var="aws_session_token=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN_PROD }}"
+          elif [ "${{ github.event.inputs.terraform_action }}" = "destroy" ]; then
+            terraform destroy -auto-approve \
+              -var="aws_access_key=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_ACCESS_KEY_ID_QA || secrets.AWS_SECRET_ACCESS_KEY_PROD }}" \
+              -var="aws_secret_key=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SECRET_ACCESS_KEY_QA || secrets.AWS_SECRET_ACCESS_KEY_PROD }}" \
+              -var="aws_session_token=${{ github.event.inputs.terraform_environment == 'qa' && secrets.AWS_SESSION_TOKEN_QA || secrets.AWS_SESSION_TOKEN_PROD }}"
+          fi

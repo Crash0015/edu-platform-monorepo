@@ -66,9 +66,9 @@ variable "enable_default_user_data" {
   }
 
   variable "ami_id" {
-    description = "AMI ID for Amazon Linux 2 (hardcoded to avoid DescribeImages permission in AWS Academy)"
+    description = "AMI ID (opcional - si está vacío, usa SSM Parameter Store para obtener Amazon Linux 2 más reciente automáticamente)"
     type        = string
-    default     = "ami-0c55b159cbfafe1f0" # Amazon Linux 2 us-east-1
+    default     = ""
   }
 
 variable "deploy_services" {
