@@ -28,13 +28,22 @@ resource "aws_security_group" "rds" {
 }
 
 # Subnet Group para RDS (en subnets privadas para alta disponibilidad)
-# Usa un nombre único para evitar conflictos con deployments anteriores
+# Importar el existente si ya existe, o crear uno nuevo
+data "aws_db_subnet_group" "existing" {
+  count = 1
+  name  = "${var.environment}-rds-subnet-group"
+}
+
 resource "aws_db_subnet_group" "main" {
-  name       = "${var.environment}-rds-subnet-group-${substr(md5(join(",", var.private_subnets)), 0, 8)}"
+  name       = "${var.environment}-rds-subnet-group"
   subnet_ids = var.private_subnets
 
   tags = {
     Name = "${var.environment}-rds-subnet-group"
+  }
+
+  lifecycle {
+    ignore_changes = [name]
   }
 }
 
