@@ -1,8 +1,10 @@
 # VPC Module - Configuración completa para AWS Academy
 # Este módulo crea todos los recursos de red necesarios
 
-data "aws_availability_zones" "available" {
-  state = "available"
+# Hardcodeado para AWS Academy (no tiene permisos para DescribeAvailabilityZones)
+# us-east-1 tiene al menos us-east-1a y us-east-1b disponibles
+locals {
+  availability_zones = ["us-east-1a", "us-east-1b"]
 }
 
 # VPC
@@ -33,7 +35,7 @@ resource "aws_subnet" "public" {
   count             = 2
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index)
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  availability_zone = local.availability_zones[count.index]
 
   map_public_ip_on_launch = true
 
@@ -49,7 +51,7 @@ resource "aws_subnet" "private" {
   count             = 2
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 100)
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  availability_zone = local.availability_zones[count.index]
 
   tags = {
     Name        = "${var.environment}-private-subnet-${count.index + 1}"

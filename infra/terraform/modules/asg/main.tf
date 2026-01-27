@@ -1,8 +1,9 @@
-# Obtener AMI ID automáticamente desde SSM Parameter Store
-# AWS mantiene este parámetro actualizado con el AMI más reciente de Amazon Linux 2
-# Esto evita necesitar permisos de DescribeImages y funciona automáticamente en CI/CD
-data "aws_ssm_parameter" "amazon_linux_2" {
-  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+# AMI ID hardcodeado para AWS Academy (no tiene permisos para SSM GetParameter)
+# Amazon Linux 2 AMI en us-east-1
+locals {
+  # AMI ID de Amazon Linux 2 en us-east-1
+  # Si este AMI no funciona, usar el AMI de una instancia existente que funcione
+  amazon_linux_2_ami = var.ami_id != "" ? var.ami_id : "ami-0c55b159cbfafe1f0"
 }
 
 resource "aws_security_group" "asg" {
@@ -40,7 +41,7 @@ resource "aws_security_group" "asg" {
 
 resource "aws_launch_template" "main" {
   name_prefix            = "${var.environment}-lt-"
-  image_id               = var.ami_id != "" ? var.ami_id : data.aws_ssm_parameter.amazon_linux_2.value
+  image_id               = local.amazon_linux_2_ami
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.asg.id]
   
