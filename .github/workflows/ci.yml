@@ -394,6 +394,8 @@ jobs:
             -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
             -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+            -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+            -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
             -out=tfplan
 
       - name: Terraform Apply
@@ -470,6 +472,8 @@ jobs:
             -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
             -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+            -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+            -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
             -out=tfplan 2>&1 | tee plan_output.txt
         continue-on-error: true
 
@@ -532,15 +536,21 @@ jobs:
             terraform plan \
               -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
               -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-              -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}"
+              -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+              -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+              -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}"
           elif [ "${{ github.event.inputs.terraform_action }}" = "apply" ]; then
             terraform apply -auto-approve \
               -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
               -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-              -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}"
+              -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+              -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+              -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}"
           elif [ "${{ github.event.inputs.terraform_action }}" = "destroy" ]; then
             terraform destroy -auto-approve \
               -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
               -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-              -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}"
+              -var="aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" \
+              -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+              -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}"
           fi

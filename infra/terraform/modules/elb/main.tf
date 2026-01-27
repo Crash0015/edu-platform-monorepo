@@ -45,15 +45,22 @@ resource "aws_lb_target_group" "main" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = var.vpc_id
+  
+  # Health check más tolerante para dar tiempo a que los servicios inicien
   health_check {
     path                = var.health_check_path
     protocol            = "HTTP"
-    matcher             = "200-399"
+    port                = "traffic-port"
+    matcher             = "200"  # Solo acepta 200 OK (más estricto pero más claro)
     interval            = 30
-    timeout             = 5
+    timeout             = 10     # Aumentado a 10 segundos
     healthy_threshold   = 2
-    unhealthy_threshold = 2
+    unhealthy_threshold = 3      # Aumentado a 3 para ser más tolerante
   }
+  
+  # Asegurar que el target group esté en múltiples AZs
+  deregistration_delay = 30
+  
   tags = {
     Name = "${var.environment}-tg"
   }

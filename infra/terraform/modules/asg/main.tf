@@ -37,6 +37,7 @@ resource "aws_launch_template" "main" {
 
   user_data = var.deploy_services ? base64encode(templatefile("${path.module}/user_data_services.sh.tftpl", {
     DOCKERHUB_USERNAME = var.dockerhub_username
+    DOCKERHUB_TOKEN    = var.dockerhub_token
     IMAGE_TAG          = var.image_tag
     ENVIRONMENT        = var.environment
     ELB_DNS_NAME       = var.elb_dns_name
@@ -52,7 +53,7 @@ resource "aws_launch_template" "main" {
 
 resource "aws_autoscaling_group" "main" {
   name                = "${var.environment}-asg"
-  vpc_zone_identifier = var.private_subnets
+  vpc_zone_identifier = var.private_subnets  # Usa múltiples subnets (2 AZs) para alta disponibilidad
   launch_template {
     id      = aws_launch_template.main.id
     version = "$Latest"
@@ -62,7 +63,7 @@ resource "aws_autoscaling_group" "main" {
   desired_capacity          = var.desired_capacity
   target_group_arns         = [var.elb_target_group_arn]
   health_check_type         = "ELB"
-  health_check_grace_period = 300
+  health_check_grace_period = 600  # 10 minutos para dar tiempo a que Docker, servicios y nginx inicien completamente
 
   tag {
     key                 = "Name"
@@ -74,4 +75,9 @@ resource "aws_autoscaling_group" "main" {
 
 output "asg_name" {
   value = aws_autoscaling_group.main.name
+}
+
+output "security_group_id" {
+  description = "Security Group ID of ASG (para permitir acceso desde RDS, MongoDB, Redis)"
+  value       = aws_security_group.asg.id
 }

@@ -65,8 +65,63 @@ variable "enable_default_user_data" {
     default     = ""
   }
 
+  variable "dockerhub_token" {
+    description = "DockerHub token/password for authentication (para evitar rate limits)"
+    type        = string
+    default     = ""
+    sensitive   = true
+  }
+
   variable "ami_id" {
     description = "AMI ID (opcional - si está vacío, usa SSM Parameter Store para obtener Amazon Linux 2 más reciente automáticamente)"
+    type        = string
+    default     = ""
+  }
+
+  # Connection strings de bases de datos
+  variable "auth_db_url" {
+    description = "PostgreSQL connection string for auth-service"
+    type        = string
+    default     = ""
+    sensitive   = true
+  }
+
+  variable "enrollment_db_url" {
+    description = "PostgreSQL connection string for enrollment-service"
+    type        = string
+    default     = ""
+    sensitive   = true
+  }
+
+  variable "course_db_url" {
+    description = "PostgreSQL connection string for course-service"
+    type        = string
+    default     = ""
+    sensitive   = true
+  }
+
+  variable "schedule_db_url" {
+    description = "PostgreSQL connection string for schedule-service"
+    type        = string
+    default     = ""
+    sensitive   = true
+  }
+
+  variable "tutoring_db_url" {
+    description = "PostgreSQL connection string for tutoring-service"
+    type        = string
+    default     = ""
+    sensitive   = true
+  }
+
+  variable "mongodb_url" {
+    description = "MongoDB connection string for search-service"
+    type        = string
+    default     = ""
+  }
+
+  variable "redis_url" {
+    description = "Redis connection string for auth-service"
     type        = string
     default     = ""
   }

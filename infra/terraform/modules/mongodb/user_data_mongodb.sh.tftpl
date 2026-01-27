@@ -1,0 +1,28 @@
+#!/bin/bash
+set -euo pipefail
+
+# Instalar MongoDB en EC2
+yum update -y
+
+# Crear archivo de repositorio de MongoDB
+cat > /etc/yum.repos.d/mongodb-org-7.0.repo <<'EOF'
+[mongodb-org-7.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/amazon/2023/mongodb-org/7.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc
+EOF
+
+# Instalar MongoDB
+yum install -y mongodb-org
+
+# Iniciar MongoDB
+systemctl enable mongod
+systemctl start mongod
+
+# Crear base de datos inicial
+sleep 5
+mongo --eval "db.getSiblingDB('${DB_NAME}').createCollection('init')" || true
+
+echo "MongoDB instalado y configurado"
