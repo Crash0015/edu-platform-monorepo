@@ -77,3 +77,63 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "dockerhub_token" {
+  description = "DockerHub token/password for authentication (para evitar rate limits)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+# Variables para RDS (Postgres)
+variable "rds_instance_class" {
+  description = "RDS instance class (db.t3.micro para AWS Academy)"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "rds_allocated_storage" {
+  description = "RDS allocated storage in GB"
+  type        = number
+  default     = 20
+}
+
+variable "db_username" {
+  description = "Master username for RDS databases"
+  type        = string
+  default     = "edu"
+  sensitive   = true
+}
+
+variable "db_password" {
+  description = "Master password for RDS databases"
+  type        = string
+  default     = "EduPlatform2024!"
+  sensitive   = true
+}
+
+variable "rds_backup_retention_period" {
+  description = "RDS backup retention period in days"
+  type        = number
+  default     = 7
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "Skip final snapshot on destroy (true para QA/testing)"
+  type        = bool
+  default     = true
+}
+
+# Variables para MongoDB (EC2)
+variable "mongodb_instance_type" {
+  description = "EC2 instance type for MongoDB"
+  type        = string
+  default     = "t3.micro"
+}
+
+# Variables para Redis (EC2)
+variable "redis_instance_type" {
+  description = "EC2 instance type for Redis"
+  type        = string
+  default     = "t3.micro"
+}

@@ -51,18 +51,71 @@ module "asg" {
   environment          = var.environment
   deploy_services      = true
   dockerhub_username   = var.dockerhub_username
+  dockerhub_token      = var.dockerhub_token
   image_tag            = var.image_tag
   
-  # Configuración optimizada para AWS Academy
+  # Configuración optimizada para AWS Academy con alta disponibilidad
   instance_type    = "t3.micro"  # Más barato que t3.small
+  min_size         = 2           # Mínimo 2 instancias (una por AZ para HA)
   max_size         = 8           # Máximo 8 instancias (respetando límite de 10 total)
-  desired_capacity = 2           # 2 instancias iniciales
+  desired_capacity = 2           # 2 instancias iniciales (distribuidas en 2 AZs)
+  
+  # Connection strings de bases de datos
+  # NOTA: Se pasan después de que las bases de datos se creen
+  # Si están vacías, los servicios usarán valores por defecto o fallarán hasta que se actualicen
+  auth_db_url          = try(module.rds.auth_db_connection_string, "")
+  enrollment_db_url    = try(module.rds.enrollment_db_connection_string, "")
+  course_db_url        = try(module.rds.course_db_connection_string, "")
+  schedule_db_url      = try(module.rds.schedule_db_connection_string, "")
+  tutoring_db_url      = try(module.rds.tutoring_db_connection_string, "")
+  mongodb_url          = try(module.mongodb.mongodb_connection_string, "")
+  redis_url            = try(module.redis.redis_connection_string, "")
 }
 
-# AWS API Gateway removido - usando api-gateway microservicio como punto de entrada
-# El ALB expone directamente el DNS público
-# module "apigw" {
-#   source       = "../modules/apigateway_http"
-#   environment  = var.environment
-#   alb_dns_name = module.elb.dns_name
-# }
+# Bases de Datos - Instancias separadas para alta disponibilidad
+# NOTA: Se crean después del ASG para evitar dependencias circulares
+# El ASG se crea primero, luego las bases de datos usan el security_group_id del ASG
+module "rds" {
+  source                 = "../modules/rds"
+  environment            = var.environment
+  vpc_id                 = module.vpc.vpc_id
+  private_subnets        = module.vpc.private_subnets
+  asg_security_group_id  = module.asg.security_group_id
+  instance_class         = var.rds_instance_class
+  allocated_storage      = var.rds_allocated_storage
+  db_username            = var.db_username
+  db_password            = var.db_password
+  backup_retention_period = var.rds_backup_retention_period
+  skip_final_snapshot    = var.rds_skip_final_snapshot
+  create_schedule_db     = true
+  create_tutoring_db     = true
+  
+  depends_on = [module.asg]
+}
+
+module "mongodb" {
+  source                = "../modules/mongodb"
+  environment           = var.environment
+  vpc_id                = module.vpc.vpc_id
+  private_subnets       = module.vpc.private_subnets
+  asg_security_group_id = module.asg.security_group_id
+  instance_type         = var.mongodb_instance_type
+  db_name               = "search"
+  
+  depends_on = [module.asg]
+}
+
+module "redis" {
+  source                = "../modules/redis"
+  environment           = var.environment
+  vpc_id                = module.vpc.vpc_id
+  private_subnets       = module.vpc.private_subnets
+  asg_security_group_id = module.asg.security_group_id
+  instance_type         = var.redis_instance_type
+  
+  depends_on = [module.asg]
+}
+
+# Nota: API Gateway microservicio eliminado - LB actúa como punto de entrada
+# Nginx en cada instancia hace routing directo a servicios
+# Las bases de datos están en instancias separadas (RDS para Postgres, EC2 para MongoDB y Redis)
