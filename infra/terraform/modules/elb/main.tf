@@ -47,15 +47,16 @@ resource "aws_lb_target_group" "main" {
   vpc_id   = var.vpc_id
   
   # Health check más tolerante para dar tiempo a que los servicios inicien
+  # Configurado para ser muy tolerante durante el arranque inicial
   health_check {
     path                = var.health_check_path
     protocol            = "HTTP"
     port                = "traffic-port"
-    matcher             = "200"  # Solo acepta 200 OK (más estricto pero más claro)
-    interval            = 30
-    timeout             = 10     # Aumentado a 10 segundos
-    healthy_threshold   = 2
-    unhealthy_threshold = 3      # Aumentado a 3 para ser más tolerante
+    matcher             = "200"  # Solo acepta 200 OK
+    interval            = 60     # Check cada 60 segundos (más tiempo entre checks)
+    timeout             = 15     # Timeout de 15 segundos (más tolerante)
+    healthy_threshold   = 2      # Necesita 2 checks exitosos para marcar como healthy
+    unhealthy_threshold = 5      # Necesita 5 checks fallidos para marcar como unhealthy (muy tolerante)
   }
   
   # Asegurar que el target group esté en múltiples AZs

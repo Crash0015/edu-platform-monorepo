@@ -7,7 +7,7 @@ data "aws_ssm_parameter" "amazon_linux_2" {
 
 resource "aws_security_group" "asg" {
   name        = "${var.environment}-asg-sg"
-  description = "Allow traffic from ELB"
+  description = "Allow traffic from ELB and SSH from Bastion"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -15,6 +15,15 @@ resource "aws_security_group" "asg" {
     to_port         = var.instance_port
     protocol        = "tcp"
     security_groups = [var.elb_sg_id]
+    description     = "HTTP from ELB"
+  }
+
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = var.bastion_sg_id != "" ? [var.bastion_sg_id] : []
+    description     = "SSH from Bastion"
   }
 
   egress {
@@ -34,6 +43,12 @@ resource "aws_launch_template" "main" {
   image_id               = var.ami_id != "" ? var.ami_id : data.aws_ssm_parameter.amazon_linux_2.value
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.asg.id]
+  
+  # Habilitar EC2 Instance Connect (no requiere keys)
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "optional"  # Para AWS Academy que puede tener restricciones
+  }
 
   user_data = var.deploy_services ? base64encode(templatefile("${path.module}/user_data_services.sh.tftpl", {
     DOCKERHUB_USERNAME = var.dockerhub_username

@@ -51,6 +51,7 @@ module "asg" {
   private_subnets      = module.vpc.private_subnets
   elb_target_group_arn = module.elb.target_group_arn
   elb_sg_id            = module.elb.security_group_id
+  bastion_sg_id       = module.bastion.security_group_id
   elb_dns_name         = module.elb.dns_name
   environment          = var.environment
   deploy_services      = true

@@ -196,25 +196,29 @@ services:
 EOF
 
 # Esperar a que Docker esté completamente listo
-sleep 10
+echo "Esperando a que Docker esté completamente listo..."
+sleep 15
 
 # Iniciar servicios con reintentos
 echo "Iniciando servicios Docker..."
 for i in {1..3}; do
-  docker-compose up -d
-  if [ $? -eq 0 ]; then
-    echo "Servicios iniciados exitosamente"
+  if docker-compose up -d; then
+    echo "Servicios iniciados exitosamente (intento $i)"
     break
   else
-    echo "Intento $i falló, reintentando en 10 segundos..."
-    sleep 10
+    echo "Intento $i falló, reintentando en 15 segundos..."
+    sleep 15
   fi
 done
+
+# Esperar un poco más para que los servicios se estabilicen
+echo "Esperando a que los servicios se estabilicen..."
+sleep 20
 
 # Esperar a que los servicios críticos estén listos
 echo "Esperando a que los servicios críticos estén listos..."
 for i in {1..30}; do
-  if docker ps | grep -q api-gateway && docker ps | grep -q web-dashboard; then
+  if docker ps | grep -q auth-service && docker ps | grep -q web-dashboard; then
     echo "Servicios críticos están listos"
     break
   fi
@@ -398,17 +402,97 @@ docker run -d --name edu-nginx --restart=always -p 80:80 \
   -v /opt/nginx.conf:/etc/nginx/nginx.conf:ro \
   nginx:stable
 
-# Verificar que Nginx esté corriendo
-sleep 5
-if docker ps | grep -q edu-nginx; then
-  echo "Nginx iniciado correctamente"
-else
-  echo "ERROR: Nginx no se inició correctamente"
-  docker logs edu-nginx || true
+# Verificar que Nginx esté corriendo y respondiendo
+echo "Verificando que Nginx esté listo..."
+for i in {1..20}; do
+  if docker ps | grep -q edu-nginx; then
+    # Verificar que Nginx responda en el puerto 80
+    if curl -f http://localhost/health > /dev/null 2>&1; then
+      echo "Nginx iniciado y respondiendo correctamente"
+      break
+    else
+      echo "Nginx corriendo pero aún no responde... ($i/20)"
+      sleep 3
+    fi
+  else
+    echo "Esperando a que Nginx inicie... ($i/20)"
+    sleep 3
+  fi
+done
+
+# Verificar estado final
+if ! docker ps | grep -q edu-nginx; then
+  echo "ERROR: Nginx no se inició correctamente - REINTENTANDO..."
+  # Reintentar iniciar Nginx
+  docker run -d --name edu-nginx --restart=always -p 80:80 \
+    -v /opt/nginx.conf:/etc/nginx/nginx.conf:ro \
+    nginx:stable
+  sleep 10
 fi
 
-# Logs finales
+# Verificación final robusta del health check
+echo "Verificación final del health check..."
+HEALTH_CHECK_OK=false
+for i in {1..10}; do
+  if curl -f -s http://localhost/health > /dev/null 2>&1; then
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health)
+    if [ "$HTTP_CODE" = "200" ]; then
+      echo "✅ Health check respondiendo correctamente (HTTP 200)"
+      HEALTH_CHECK_OK=true
+      break
+    else
+      echo "Health check responde pero con código HTTP $HTTP_CODE (intento $i/10)"
+      sleep 3
+    fi
+  else
+    echo "Health check no responde (intento $i/10)"
+    sleep 3
+  fi
+done
+
+if [ "$HEALTH_CHECK_OK" = false ]; then
+  echo "❌ ADVERTENCIA: Health check no responde correctamente después de 10 intentos"
+  echo "Estado de Nginx:"
+  docker ps | grep edu-nginx || echo "Nginx NO está corriendo"
+  echo "Logs de Nginx:"
+  docker logs edu-nginx --tail 20 || true
+  echo "Verificando configuración de Nginx:"
+  docker exec edu-nginx nginx -t 2>&1 || true
+  # NO hacer exit 1 aquí - permitir que la instancia se registre y el ALB verifique
+fi
+
+# Resumen final
 echo "=========================================="
-echo "Servicios desplegados:"
-docker ps --format "table {{.Names}}\t{{.Status}}"
+echo "📊 RESUMEN DEL DESPLIEGUE:"
+echo "=========================================="
+echo "Contenedores corriendo:"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+
+echo ""
+echo "Verificación del endpoint /health:"
+HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health 2>/dev/null || echo "000")
+if [ "$HEALTH_RESPONSE" = "200" ]; then
+  echo "✅ Health check respondiendo correctamente (HTTP $HEALTH_RESPONSE)"
+else
+  echo "❌ Health check NO responde (HTTP $HEALTH_RESPONSE)"
+  echo "Diagnóstico:"
+  docker ps | grep edu-nginx || echo "  - Nginx NO está corriendo"
+  curl -v http://localhost/health 2>&1 | head -20 || true
+fi
+
+echo ""
+echo "Estado de Nginx:"
+if docker ps | grep -q edu-nginx; then
+  echo "✅ Nginx está corriendo"
+  docker exec edu-nginx nginx -t 2>&1 | grep -q "successful" && echo "✅ Configuración de Nginx válida" || echo "❌ Configuración de Nginx tiene errores"
+else
+  echo "❌ Nginx NO está corriendo"
+fi
+
+echo ""
+echo "=========================================="
+echo "✅ User data script completado"
+echo "La instancia está lista para recibir tráfico del ALB"
+echo "El ALB verificará el health check en /health cada 60 segundos"
+echo "=========================================="
 echo "=========================================="

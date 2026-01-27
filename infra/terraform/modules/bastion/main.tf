@@ -35,7 +35,12 @@ resource "aws_instance" "bastion" {
   subnet_id                   = var.subnet_id
   vpc_security_group_ids      = [aws_security_group.bastion.id]
   associate_public_ip_address = true
-  key_name                    = var.key_name != null ? var.key_name : (var.create_key_pair ? aws_key_pair.bastion[0].key_name : null)
+  # NO requiere key_name - usamos EC2 Instance Connect automáticamente
+  # key_name se deja como null para forzar el uso de EC2 Instance Connect
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "optional"  # Para AWS Academy que puede tener restricciones
+  }
   tags = {
     Name = "${var.environment}-bastion"
   }
@@ -43,4 +48,14 @@ resource "aws_instance" "bastion" {
 
 output "public_ip" {
   value = aws_instance.bastion.public_ip
+}
+
+output "instance_id" {
+  description = "Instance ID of the Bastion host (para EC2 Instance Connect)"
+  value       = aws_instance.bastion.id
+}
+
+output "security_group_id" {
+  description = "Security Group ID of the Bastion host"
+  value       = aws_security_group.bastion.id
 }

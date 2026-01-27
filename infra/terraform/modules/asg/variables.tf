@@ -13,10 +13,16 @@ variable "elb_target_group_arn" {
   type        = string
 }
 
-variable "elb_sg_id" {
-  description = "Security Group ID of the ELB/ALB allowed to reach instances"
-  type        = string
-}
+  variable "elb_sg_id" {
+    description = "Security Group ID of the ELB/ALB allowed to reach instances"
+    type        = string
+  }
+
+  variable "bastion_sg_id" {
+    description = "Security Group ID of the Bastion host (para permitir SSH)"
+    type        = string
+    default     = ""
+  }
 
 variable "instance_type" {
   description = "EC2 instance type for ASG instances"

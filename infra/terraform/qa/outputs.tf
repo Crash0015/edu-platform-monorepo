@@ -8,6 +8,11 @@ output "bastion_public_ip" {
   value       = module.bastion.public_ip
 }
 
+output "bastion_instance_id" {
+  description = "Instance ID of the Bastion host (para usar con EC2 Instance Connect - SIN KEYS)"
+  value       = module.bastion.instance_id
+}
+
 output "elb_dns_name" {
   description = "DNS name of the ELB"
   value       = module.elb.dns_name
