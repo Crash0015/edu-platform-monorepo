@@ -35,7 +35,7 @@ resource "aws_instance" "mongodb" {
   vpc_security_group_ids      = [aws_security_group.mongodb.id]
   associate_public_ip_address = false
 
-  user_data = base64encode(templatefile("${path.module}/user_data_mongodb.sh.tftpl", {
+  user_data_base64 = base64encode(templatefile("${path.module}/user_data_mongodb.sh.tftpl", {
     DB_NAME = var.db_name
   }))
 

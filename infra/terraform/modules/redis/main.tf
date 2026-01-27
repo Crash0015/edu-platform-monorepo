@@ -35,7 +35,7 @@ resource "aws_instance" "redis" {
   vpc_security_group_ids      = [aws_security_group.redis.id]
   associate_public_ip_address = false
 
-  user_data = base64encode(file("${path.module}/user_data_redis.sh"))
+  user_data_base64 = base64encode(file("${path.module}/user_data_redis.sh"))
 
   tags = {
     Name        = "${var.environment}-redis"
