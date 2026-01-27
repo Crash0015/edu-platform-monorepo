@@ -86,6 +86,7 @@ module "rds" {
   vpc_id                 = module.vpc.vpc_id
   private_subnets        = module.vpc.private_subnets
   asg_security_group_id  = module.asg.security_group_id
+  bastion_sg_id         = module.bastion.security_group_id
   instance_class         = var.rds_instance_class
   allocated_storage      = var.rds_allocated_storage
   db_username            = var.db_username
@@ -104,6 +105,7 @@ module "mongodb" {
   vpc_id                = module.vpc.vpc_id
   private_subnets       = module.vpc.private_subnets
   asg_security_group_id = module.asg.security_group_id
+  bastion_sg_id        = module.bastion.security_group_id
   instance_type         = var.mongodb_instance_type
   db_name               = "search"
   
@@ -116,6 +118,7 @@ module "redis" {
   vpc_id                = module.vpc.vpc_id
   private_subnets       = module.vpc.private_subnets
   asg_security_group_id = module.asg.security_group_id
+  bastion_sg_id        = module.bastion.security_group_id
   instance_type         = var.redis_instance_type
   
   depends_on = [module.asg]

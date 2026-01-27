@@ -15,6 +15,14 @@ resource "aws_security_group" "mongodb" {
     description     = "MongoDB from ASG"
   }
 
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = var.bastion_sg_id != "" ? [var.bastion_sg_id] : []
+    description     = "SSH from Bastion"
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -29,7 +37,7 @@ resource "aws_security_group" "mongodb" {
 
 # EC2 Instance para MongoDB
 resource "aws_instance" "mongodb" {
-  ami                         = var.ami_id != "" ? var.ami_id : data.aws_ssm_parameter.amazon_linux_2.value
+  ami                         = local.amazon_linux_2_ami
   instance_type               = var.instance_type
   subnet_id                   = var.private_subnets[0]  # Primera subnet privada
   vpc_security_group_ids      = [aws_security_group.mongodb.id]
@@ -46,9 +54,9 @@ resource "aws_instance" "mongodb" {
   }
 }
 
-# Obtener AMI ID automáticamente
-data "aws_ssm_parameter" "amazon_linux_2" {
-  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+# AMI ID hardcodeado para AWS Academy (no tiene permisos para SSM GetParameter)
+locals {
+  amazon_linux_2_ami = var.ami_id != "" ? var.ami_id : "ami-0c55b159cbfafe1f0"
 }
 
 output "mongodb_endpoint" {

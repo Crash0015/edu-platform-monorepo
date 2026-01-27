@@ -18,6 +18,12 @@ variable "asg_security_group_id" {
   type        = string
 }
 
+variable "bastion_sg_id" {
+  description = "Security Group ID of the Bastion host (para permitir SSH y debugging)"
+  type        = string
+  default     = ""
+}
+
 variable "instance_class" {
   description = "RDS instance class (db.t3.micro para AWS Academy)"
   type        = string

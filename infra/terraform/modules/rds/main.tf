@@ -15,6 +15,14 @@ resource "aws_security_group" "rds" {
     description     = "Postgres from ASG"
   }
 
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = var.bastion_sg_id != "" ? [var.bastion_sg_id] : []
+    description     = "Postgres from Bastion (para debugging)"
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

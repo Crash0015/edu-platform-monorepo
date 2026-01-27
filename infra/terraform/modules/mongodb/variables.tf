@@ -18,6 +18,12 @@ variable "asg_security_group_id" {
   type        = string
 }
 
+variable "bastion_sg_id" {
+  description = "Security Group ID of the Bastion host (para permitir SSH)"
+  type        = string
+  default     = ""
+}
+
 variable "instance_type" {
   description = "EC2 instance type for MongoDB"
   type        = string
