@@ -46,7 +46,7 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "auth" {
   identifier             = "${var.environment}-auth-db"
   engine                 = "postgres"
-  engine_version         = "15.3"
+  # No especificar engine_version para usar la más reciente disponible
   instance_class         = var.instance_class
   allocated_storage      = var.allocated_storage
   storage_type           = "gp3"
@@ -77,7 +77,7 @@ resource "aws_db_instance" "auth" {
 resource "aws_db_instance" "enrollment" {
   identifier             = "${var.environment}-enrollment-db"
   engine                 = "postgres"
-  engine_version         = "15.3"
+  # No especificar engine_version para usar la más reciente disponible
   instance_class         = var.instance_class
   allocated_storage      = var.allocated_storage
   storage_type           = "gp3"
@@ -108,7 +108,7 @@ resource "aws_db_instance" "enrollment" {
 resource "aws_db_instance" "course" {
   identifier             = "${var.environment}-course-db"
   engine                 = "postgres"
-  engine_version         = "15.3"
+  # No especificar engine_version para usar la más reciente disponible
   instance_class         = var.instance_class
   allocated_storage      = var.allocated_storage
   storage_type           = "gp3"
@@ -140,7 +140,7 @@ resource "aws_db_instance" "schedule" {
   count                  = var.create_schedule_db ? 1 : 0
   identifier             = "${var.environment}-schedule-db"
   engine                 = "postgres"
-  engine_version         = "15.3"
+  # No especificar engine_version para usar la más reciente disponible
   instance_class         = var.instance_class
   allocated_storage      = var.allocated_storage
   storage_type           = "gp3"
@@ -172,7 +172,7 @@ resource "aws_db_instance" "tutoring" {
   count                  = var.create_tutoring_db ? 1 : 0
   identifier             = "${var.environment}-tutoring-db"
   engine                 = "postgres"
-  engine_version         = "15.3"
+  # No especificar engine_version para usar la más reciente disponible
   instance_class         = var.instance_class
   allocated_storage      = var.allocated_storage
   storage_type           = "gp3"
