@@ -39,8 +39,8 @@ services:
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3001
-      - DATABASE_URL=${AUTH_DB_URL:-postgresql://edu:EduPlatform2024!@qa-auth-db.${AWS_REGION}.rds.amazonaws.com:5432/authdb}
-      - REDIS_URL=${REDIS_URL:-redis://localhost:6379}
+      - DATABASE_URL=${AUTH_DB_URL}
+      - REDIS_URL=${REDIS_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -55,7 +55,7 @@ services:
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3004
-      - DATABASE_URL=${COURSE_DB_URL:-postgresql://edu:EduPlatform2024!@qa-course-db.${AWS_REGION}.rds.amazonaws.com:5432/coursedb}
+      - DATABASE_URL=${COURSE_DB_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
@@ -98,7 +98,7 @@ services:
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3007
-      - DATABASE_URL=${ENROLLMENT_DB_URL:-postgresql://edu:EduPlatform2024!@qa-enrollment-db.${AWS_REGION}.rds.amazonaws.com:5432/enrollmentdb}
+      - DATABASE_URL=${ENROLLMENT_DB_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
@@ -113,7 +113,7 @@ services:
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3008
-      - DATABASE_URL=${SCHEDULE_DB_URL:-postgresql://edu:EduPlatform2024!@qa-schedule-db.${AWS_REGION}.rds.amazonaws.com:5432/scheduledb}
+      - DATABASE_URL=${SCHEDULE_DB_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
@@ -142,7 +142,7 @@ services:
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3008
-      - MONGO_URL=${MONGODB_URL:-mongodb://localhost:27017/search}
+      - MONGO_URL=${MONGODB_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
@@ -157,7 +157,7 @@ services:
     environment:
       - NODE_ENV=${ENVIRONMENT}
       - PORT=3010
-      - DATABASE_URL=${TUTORING_DB_URL:-postgresql://edu:EduPlatform2024!@qa-tutoring-db.${AWS_REGION}.rds.amazonaws.com:5432/tutoringdb}
+      - DATABASE_URL=${TUTORING_DB_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
