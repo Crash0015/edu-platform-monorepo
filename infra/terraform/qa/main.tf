@@ -60,16 +60,16 @@ module "asg" {
   max_size         = 8           # Máximo 8 instancias (respetando límite de 10 total)
   desired_capacity = 2           # 2 instancias iniciales (distribuidas en 2 AZs)
   
-  # Connection strings de bases de datos
-  # NOTA: Se pasan después de que las bases de datos se creen
-  # Si están vacías, los servicios usarán valores por defecto o fallarán hasta que se actualicen
-  auth_db_url          = try(module.rds.auth_db_connection_string, "")
-  enrollment_db_url    = try(module.rds.enrollment_db_connection_string, "")
-  course_db_url        = try(module.rds.course_db_connection_string, "")
-  schedule_db_url      = try(module.rds.schedule_db_connection_string, "")
-  tutoring_db_url      = try(module.rds.tutoring_db_connection_string, "")
-  mongodb_url          = try(module.mongodb.mongodb_connection_string, "")
-  redis_url            = try(module.redis.redis_connection_string, "")
+  # Connection strings de bases de datos - inicialmente vacías
+  # Se actualizarán después de que las bases de datos se creen
+  # Los servicios usarán valores por defecto o se configurarán manualmente
+  auth_db_url          = ""
+  enrollment_db_url    = ""
+  course_db_url        = ""
+  schedule_db_url      = ""
+  tutoring_db_url      = ""
+  mongodb_url          = ""
+  redis_url            = ""
 }
 
 # Bases de Datos - Instancias separadas para alta disponibilidad

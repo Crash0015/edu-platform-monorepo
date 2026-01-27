@@ -32,7 +32,6 @@ jobs:
       matrix:
         service:
           - auth-service
-          - api-gateway
           - notification-service
           - automation-service
           - enrollment-service
@@ -199,17 +198,17 @@ jobs:
           node-version: 22
 
       - name: Start integration stack
-        run: docker compose --env-file infra/docker/.env.ci -f infra/docker/docker-compose.yml --profile dev up -d postgres postgres-course postgres-enrollment redis zookeeper kafka rabbitmq auth-service user-service course-service enrollment-service notification-service api-gateway mailhog
+        run: docker compose --env-file infra/docker/.env.ci -f infra/docker/docker-compose.yml --profile dev up -d postgres postgres-course postgres-enrollment redis zookeeper kafka rabbitmq auth-service user-service course-service enrollment-service notification-service mailhog
 
-      - name: Wait for gateway
+      - name: Wait for auth service
         run: |
           for i in {1..30}; do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health | grep -q "200"; then
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health | grep -q "200"; then
               exit 0
             fi
             sleep 5
           done
-          echo "api-gateway did not become healthy" && exit 1
+          echo "auth-service did not become healthy" && exit 1
 
       - name: Run enrollment migration
         run: docker exec edu-enrollment-service npm run prisma:migrate
@@ -275,9 +274,8 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/qa')
     strategy:
       fail-fast: false
-      matrix:
-        service:
-          - api-gateway
+        matrix:
+          service:
           - auth-service
           - course-service
           - enrollment-service

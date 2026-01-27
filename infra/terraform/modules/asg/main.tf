@@ -41,6 +41,14 @@ resource "aws_launch_template" "main" {
     IMAGE_TAG          = var.image_tag
     ENVIRONMENT        = var.environment
     ELB_DNS_NAME       = var.elb_dns_name
+    AWS_REGION         = "us-east-1"
+    AUTH_DB_URL        = var.auth_db_url
+    ENROLLMENT_DB_URL  = var.enrollment_db_url
+    COURSE_DB_URL      = var.course_db_url
+    SCHEDULE_DB_URL    = var.schedule_db_url
+    TUTORING_DB_URL    = var.tutoring_db_url
+    MONGODB_URL        = var.mongodb_url
+    REDIS_URL          = var.redis_url
   })) : (var.enable_default_user_data ? base64encode(templatefile("${path.module}/user_data.sh.tftpl", {})) : null)
 
   tag_specifications {
