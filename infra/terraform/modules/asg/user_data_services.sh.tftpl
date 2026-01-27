@@ -435,7 +435,7 @@ echo "Verificación final del health check..."
 HEALTH_CHECK_OK=false
 for i in {1..10}; do
   if curl -f -s http://localhost/health > /dev/null 2>&1; then
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health)
+    HTTP_CODE=$(curl -s -o /dev/null -w "%%{http_code}" http://localhost/health)
     if [ "$HTTP_CODE" = "200" ]; then
       echo "✅ Health check respondiendo correctamente (HTTP 200)"
       HEALTH_CHECK_OK=true
@@ -470,7 +470,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
 
 echo ""
 echo "Verificación del endpoint /health:"
-HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health 2>/dev/null || echo "000")
+HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%%{http_code}" http://localhost/health 2>/dev/null || echo "000")
 if [ "$HEALTH_RESPONSE" = "200" ]; then
   echo "✅ Health check respondiendo correctamente (HTTP $HEALTH_RESPONSE)"
 else
